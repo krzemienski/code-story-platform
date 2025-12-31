@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Logo } from "@/components/logo"
@@ -11,13 +13,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, User, Settings, LogOut, Menu, X, Headphones, Key, FlaskConical } from "lucide-react"
+import { Plus, Settings, LogOut, Menu, X, Headphones, Compass, Github, Search, BookOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { useState } from "react"
 import type { Profile } from "@/lib/types"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import { setDemoMode } from "@/lib/demo-mode"
+import { Input } from "@/components/ui/input"
 
 interface DashboardNavProps {
   user: SupabaseUser
@@ -29,6 +32,7 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
   const handleSignOut = async () => {
     if (isDemo) {
@@ -43,35 +47,39 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
     router.refresh()
   }
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      router.push(`/discover?q=${encodeURIComponent(searchQuery)}`)
+    }
+  }
+
   const navItems = [
-    { href: "/dashboard", label: "Stories", icon: Headphones },
-    { href: "/dashboard/api-keys", label: "API Keys", icon: Key },
-    { href: "/dashboard/settings", label: "Settings", icon: Settings },
+    { href: "/dashboard", label: "My Stories", icon: Headphones },
+    { href: "/discover", label: "Discover", icon: Compass },
+    { href: "/docs", label: "Docs", icon: BookOpen },
   ]
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="flex items-center gap-2">
+        {/* Left section: Logo + Nav */}
+        <div className="flex items-center gap-6">
+          <Link href="/" className="flex items-center">
             <Logo />
-            {isDemo && (
-              <span className="flex items-center gap-1 rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-500">
-                <FlaskConical className="h-3 w-3" />
-                Demo
-              </span>
-            )}
           </Link>
+
+          {/* Desktop nav */}
           <div className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   pathname === item.href
                     ? "bg-secondary text-foreground"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
                 )}
               >
                 <item.icon className="h-4 w-4" />
@@ -81,9 +89,33 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        {/* Center section: Search */}
+        <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-8">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search stories, repos, topics..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 bg-secondary/50 border-transparent focus:border-border"
+            />
+          </div>
+        </form>
+
+        {/* Right section: Actions + Profile */}
+        <div className="flex items-center gap-3">
+          <a
+            href="https://github.com/codestory/codestory"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden md:flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Github className="h-4 w-4" />
+          </a>
+
           <Button asChild size="sm" className="hidden sm:flex">
-            <Link href="/dashboard/new">
+            <Link href="/">
               <Plus className="mr-2 h-4 w-4" />
               New Story
             </Link>
@@ -91,21 +123,25 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-sm font-medium text-foreground">
+              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-500 ring-2 ring-emerald-500/20 transition-all hover:ring-emerald-500/40">
                 {profile?.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <div className="px-2 py-1.5">
+              <div className="px-2 py-2">
                 <p className="text-sm font-medium text-foreground">{profile?.name || "User"}</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
-                {isDemo && <p className="mt-1 text-xs text-yellow-500">Demo Mode Active</p>}
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                {isDemo && (
+                  <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-500">
+                    Demo Mode
+                  </span>
+                )}
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/settings" className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  Account
+                <Link href="/dashboard" className="cursor-pointer">
+                  <Headphones className="mr-2 h-4 w-4" />
+                  My Stories
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -115,15 +151,19 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="cursor-pointer text-destructive focus:text-destructive"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 {isDemo ? "Exit Demo" : "Sign out"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Mobile menu button */}
           <button
-            className="flex h-10 w-10 items-center justify-center rounded-lg md:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-lg md:hidden text-muted-foreground"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -136,10 +176,24 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
       <div
         className={cn(
           "overflow-hidden border-b border-border bg-background transition-all duration-300 md:hidden",
-          mobileMenuOpen ? "max-h-64" : "max-h-0 border-b-0",
+          mobileMenuOpen ? "max-h-80" : "max-h-0 border-b-0",
         )}
       >
-        <div className="flex flex-col gap-1 p-4">
+        <div className="flex flex-col gap-2 p-4">
+          {/* Mobile search */}
+          <form onSubmit={handleSearch} className="mb-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search stories..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10"
+              />
+            </div>
+          </form>
+
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -156,8 +210,19 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
               {item.label}
             </Link>
           ))}
+
+          <a
+            href="https://github.com/codestory/codestory"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground"
+          >
+            <Github className="h-4 w-4" />
+            GitHub
+          </a>
+
           <Button asChild size="sm" className="mt-2">
-            <Link href="/dashboard/new" onClick={() => setMobileMenuOpen(false)}>
+            <Link href="/" onClick={() => setMobileMenuOpen(false)}>
               <Plus className="mr-2 h-4 w-4" />
               New Story
             </Link>

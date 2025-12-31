@@ -1,11 +1,11 @@
-import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/server"
-import { Github, Headphones, Code, Zap, Globe } from "lucide-react"
+import { Code, Users, Plus } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { StoryGenerator } from "@/components/story-generator"
 import { Navbar } from "@/components/navbar"
-import { TrendingStories } from "@/components/trending-stories"
+import { FeaturedHero } from "@/components/featured-hero"
+import { ChronicleCard } from "@/components/chronicle-card"
+import { ParallaxBackground } from "@/components/parallax-background"
 
 async function getPublicStories() {
   const supabase = await createClient()
@@ -18,147 +18,167 @@ async function getPublicStories() {
       actual_duration_seconds,
       created_at,
       play_count,
+      audio_url,
+      audio_chunks,
       code_repositories (
         repo_name,
         repo_owner,
         primary_language,
-        stars_count
+        stars_count,
+        description
       )
     `)
     .eq("status", "completed")
     .eq("is_public", true)
     .order("play_count", { ascending: false, nullsFirst: false })
-    .limit(6)
+    .limit(10)
 
   return data || []
 }
 
+async function getFeaturedStories() {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("stories")
+    .select(`
+      id,
+      title,
+      actual_duration_seconds,
+      code_repositories (
+        repo_name,
+        repo_owner,
+        primary_language,
+        description
+      )
+    `)
+    .eq("status", "completed")
+    .eq("is_public", true)
+    .order("play_count", { ascending: false, nullsFirst: false })
+    .limit(3)
+
+  return (data || []).map((story) => ({
+    id: story.id,
+    title: story.title,
+    description: story.code_repositories?.description || undefined,
+    repo_owner: story.code_repositories?.repo_owner || undefined,
+    repo_name: story.code_repositories?.repo_name || undefined,
+    primary_language: story.code_repositories?.primary_language || undefined,
+    actual_duration_seconds: story.actual_duration_seconds || undefined,
+  }))
+}
+
 export default async function HomePage() {
-  const stories = await getPublicStories()
+  const [stories, featuredStories] = await Promise.all([getPublicStories(), getFeaturedStories()])
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-background relative">
+      <ParallaxBackground />
+
       <Navbar />
 
       <main>
-        {/* Hero + Generator Section */}
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl animate-pulse" />
-            <div
-              className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse"
-              style={{ animationDelay: "1s" }}
-            />
-            <div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-3xl animate-pulse"
-              style={{ animationDelay: "0.5s" }}
-            />
+        {/* Hero Section */}
+        <section className="px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <div className="max-w-7xl mx-auto">
+            <FeaturedHero stories={featuredStories} />
           </div>
+        </section>
 
-          <div className="relative mx-auto max-w-4xl px-4 py-16 sm:py-24">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/50 px-4 py-1.5 text-sm mb-6">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                </span>
-                <span className="text-zinc-400">100% Open Source</span>
+        {/* Stories Section - Renamed from "Chronicles" to "Code Stories" */}
+        <section className="px-4 sm:px-6 lg:px-8 py-12 border-t border-border">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-semibold mb-2">Code Stories</h2>
+                <p className="text-muted-foreground">Discover the stories woven within open source projects.</p>
               </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-balance text-white">
-                Turn any codebase into an
-                <span className="text-emerald-500 block sm:inline"> audio story</span>
-              </h1>
-              <p className="mt-6 text-lg text-zinc-400 max-w-2xl mx-auto text-pretty">
-                Paste a GitHub URL. Get a narrated explanation. Listen while commuting, exercising, or doing chores. No
-                signup required.
+
+              <div className="flex items-center gap-2">
+                {/* View toggle */}
+                <div className="flex items-center rounded-lg border border-border bg-card/50 p-1">
+                  <button className="p-1.5 rounded bg-secondary text-foreground">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="7" height="7" />
+                      <rect x="14" y="3" width="7" height="7" />
+                      <rect x="3" y="14" width="7" height="7" />
+                      <rect x="14" y="14" width="7" height="7" />
+                    </svg>
+                  </button>
+                  <button className="p-1.5 rounded text-muted-foreground hover:text-foreground">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="3" y1="6" x2="21" y2="6" />
+                      <line x1="3" y1="12" x2="21" y2="12" />
+                      <line x1="3" y1="18" x2="21" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+
+                <Button variant="outline" size="sm" className="gap-2 bg-transparent border-border">
+                  Filters
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </Button>
+              </div>
+            </div>
+
+            {/* Stories list */}
+            {stories.length > 0 ? (
+              <div className="space-y-4">
+                {stories.map((story) => (
+                  <ChronicleCard key={story.id} story={story} variant="list" />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 text-muted-foreground">
+                <Code className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No stories yet. Be the first to create one!</p>
+              </div>
+            )}
+
+            {/* Submit CTA */}
+            <div className="flex flex-col items-center justify-center py-12 mt-8 border-t border-border">
+              <div className="h-12 w-12 rounded-full border border-dashed border-border flex items-center justify-center mb-4">
+                <Plus className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <h3 className="font-medium mb-1">Submit Your Story</h3>
+              <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
+                Open a PR to add your generated story to the collection.
               </p>
-            </div>
-
-            {/* Main Generator Component */}
-            <Suspense fallback={<div className="h-96 animate-pulse bg-zinc-900/50 rounded-xl" />}>
-              <StoryGenerator />
-            </Suspense>
-          </div>
-        </section>
-
-        {/* Quick Stats */}
-        <section className="border-y border-zinc-800 bg-zinc-900/30">
-          <div className="mx-auto max-w-7xl px-4 py-8">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
-              <div>
-                <div className="text-3xl font-bold text-emerald-500">Free</div>
-                <div className="text-sm text-zinc-500">No signup needed</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-emerald-500">20 min</div>
-                <div className="text-sm text-zinc-500">Max story length</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-emerald-500">5</div>
-                <div className="text-sm text-zinc-500">Narrative styles</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-emerald-500">MIT</div>
-                <div className="text-sm text-zinc-500">Licensed</div>
-              </div>
+              <Button variant="outline" className="bg-transparent border-border" asChild>
+                <Link href="/discover">Load More Stories</Link>
+              </Button>
             </div>
           </div>
         </section>
 
-        <TrendingStories />
-
-        {/* How It Works - Simplified */}
-        <section className="border-t border-zinc-800 bg-zinc-900/20 px-4 py-16">
-          <div className="mx-auto max-w-5xl">
-            <h2 className="text-2xl font-bold text-center mb-12 text-white">How It Works</h2>
-            <div className="grid sm:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
-                  <Code className="h-6 w-6 text-emerald-500" />
-                </div>
-                <h3 className="font-semibold mb-2 text-white">1. Paste URL</h3>
-                <p className="text-sm text-zinc-500">Any public GitHub repository works</p>
-              </div>
-              <div className="text-center">
-                <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
-                  <Zap className="h-6 w-6 text-emerald-500" />
-                </div>
-                <h3 className="font-semibold mb-2 text-white">2. AI Analyzes</h3>
-                <p className="text-sm text-zinc-500">Claude reads and understands the code</p>
-              </div>
-              <div className="text-center">
-                <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
-                  <Headphones className="h-6 w-6 text-emerald-500" />
-                </div>
-                <h3 className="font-semibold mb-2 text-white">3. Listen</h3>
-                <p className="text-sm text-zinc-500">ElevenLabs generates the audio</p>
-              </div>
+        {/* Open Source Section */}
+        <section className="px-4 sm:px-6 lg:px-8 py-16 sm:py-24 bg-card/30 border-t border-border">
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/10 mb-6">
+              <span className="text-[10px] uppercase tracking-[0.15em] text-primary font-medium">Open Source</span>
             </div>
-          </div>
-        </section>
 
-        {/* Open Source CTA */}
-        <section className="px-4 py-16">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center gap-2 mb-6">
-              <Globe className="h-5 w-5 text-emerald-500" />
-              <span className="text-sm font-medium text-zinc-300">Open Source</span>
-            </div>
-            <h2 className="text-2xl font-bold mb-4 text-white">Built in public. Run it yourself.</h2>
-            <p className="text-zinc-400 mb-8">
-              Self-host with your own API keys for unlimited private generations. Or use this hosted version for free
-              (stories are public).
+            <h2 className="text-3xl sm:text-4xl font-semibold mb-2">Built by developers,</h2>
+            <p className="text-3xl sm:text-4xl font-serif italic text-muted-foreground mb-6">for the love of code.</p>
+
+            <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
+              Code Story is fully open source. We believe that software architecture is an art form deserving of new
+              mediums of expression. Contribute to the engine, improve the audio generation, or expand the collection.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button variant="outline" className="gap-2 bg-transparent border-border" asChild>
                 <a href="https://github.com/codestory/codestory" target="_blank" rel="noopener noreferrer">
-                  <Github className="mr-2 h-4 w-4" />
-                  View Source
+                  <Code className="h-4 w-4" />
+                  View Source on GitHub
                 </a>
               </Button>
-              <Button variant="outline" className="bg-transparent border-zinc-700 hover:bg-zinc-800" asChild>
-                <a href="https://github.com/codestory/codestory#self-hosting" target="_blank" rel="noopener noreferrer">
-                  Self-Host Guide
+              <Button variant="outline" className="gap-2 bg-transparent border-border" asChild>
+                <a href="https://discord.gg/codestory" target="_blank" rel="noopener noreferrer">
+                  <Users className="h-4 w-4" />
+                  Join Discord Community
                 </a>
               </Button>
             </div>
@@ -166,23 +186,32 @@ export default async function HomePage() {
         </section>
       </main>
 
-      {/* Minimal Footer */}
-      <footer className="border-t border-zinc-800 py-8 px-4">
-        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-sm text-zinc-500">
-            <Headphones className="h-4 w-4" />
-            <span>Code Story - MIT License</span>
+      {/* Footer - Removed API link */}
+      <footer className="border-t border-border py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-primary">
+              <path d="M12 2L22 12L12 22L2 12L12 2Z" />
+            </svg>
+            <span className="font-semibold text-sm">
+              Code<span className="text-primary">Story</span>
+            </span>
           </div>
-          <div className="flex items-center gap-6 text-sm">
+
+          <p className="text-xs text-muted-foreground">© 2025 Code Story. Licensed under MIT. The code is open.</p>
+
+          <div className="flex items-center gap-6 text-xs text-muted-foreground">
+            <Link href="/docs" className="hover:text-foreground transition-colors">
+              Documentation
+            </Link>
             <a
               href="https://github.com/codestory/codestory"
-              className="text-zinc-500 hover:text-white transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors"
             >
               GitHub
             </a>
-            <Link href="/discover" className="text-zinc-500 hover:text-white transition-colors">
-              Discover
-            </Link>
           </div>
         </div>
       </footer>

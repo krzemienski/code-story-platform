@@ -32,6 +32,7 @@ export default async function PublicStoryPage({ params }: PageProps) {
   await supabase.rpc("increment_play_count", { story_id: id })
 
   const repo = story.code_repositories
+  const repoName = repo ? `${repo.repo_owner}/${repo.repo_name}` : story.title
   const duration = story.actual_duration_seconds
     ? `${Math.floor(story.actual_duration_seconds / 60)} min`
     : `~${story.target_duration_minutes} min`
@@ -51,21 +52,19 @@ export default async function PublicStoryPage({ params }: PageProps) {
                   <Github className="h-5 w-5 text-emerald-500" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-white">
-                    {repo.repo_owner}/{repo.repo_name}
-                  </h1>
+                  <h1 className="text-xl font-bold text-white">{repoName}</h1>
                   <p className="text-sm text-zinc-400">{story.title}</p>
                 </div>
               </div>
-              {repo.description && <p className="text-zinc-500 text-sm mt-3 max-w-xl">{repo.description}</p>}
+              {repo?.description && <p className="text-zinc-500 text-sm mt-3 max-w-xl">{repo.description}</p>}
               <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-zinc-500">
-                {repo.primary_language && (
+                {repo?.primary_language && (
                   <span className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-emerald-500" />
                     {repo.primary_language}
                   </span>
                 )}
-                {repo.stars_count > 0 && <span>{repo.stars_count?.toLocaleString()} stars</span>}
+                {(repo?.stars_count ?? 0) > 0 && <span>{repo?.stars_count?.toLocaleString()} stars</span>}
                 <span className="capitalize px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">
                   {story.narrative_style}
                 </span>
@@ -82,16 +81,23 @@ export default async function PublicStoryPage({ params }: PageProps) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="bg-transparent border-zinc-700 hover:bg-zinc-800" asChild>
-                <a
-                  href={`https://github.com/${repo.repo_owner}/${repo.repo_name}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              {repo && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-transparent border-zinc-700 hover:bg-zinc-800"
+                  asChild
                 >
-                  <Github className="h-4 w-4 mr-2" />
-                  View Repo
-                </a>
-              </Button>
+                  <a
+                    href={`https://github.com/${repo.repo_owner}/${repo.repo_name}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Github className="h-4 w-4 mr-2" />
+                    View Repo
+                  </a>
+                </Button>
+              )}
               <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
                 <Share2 className="h-4 w-4" />
               </Button>

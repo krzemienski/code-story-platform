@@ -2,11 +2,13 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
-import { Plus, Play, Download, MoreHorizontal, Clock, Headphones, TrendingUp, Compass } from "lucide-react"
+import { Plus, Download, MoreHorizontal, Clock, Headphones, TrendingUp, Compass } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Progress } from "@/components/ui/progress"
+import { ChronicleCard } from "@/components/chronicle-card"
+import { ParallaxBackground } from "@/components/parallax-background"
 import { Navbar } from "@/components/navbar"
-import { PublicStoryCard } from "@/components/public-story-card"
+import { AudioPlayer } from "@/components/audio-player" // Import client component for audio context
 
 function formatDuration(seconds: number | null): string {
   if (!seconds) return "0:00"
@@ -69,7 +71,8 @@ export default async function DashboardPage() {
       code_repositories (
         repo_name,
         repo_owner,
-        primary_language
+        primary_language,
+        stars_count
       )
     `)
     .eq("status", "completed")
@@ -86,18 +89,21 @@ export default async function DashboardPage() {
   )
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-background relative">
+      <ParallaxBackground />
       <Navbar />
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-            <p className="text-zinc-400">Welcome back, {user.user_metadata?.name || user.email?.split("@")[0]}</p>
+            <h1 className="text-2xl font-bold text-foreground">Your Stories</h1>
+            <p className="text-muted-foreground">
+              Welcome back, {user.user_metadata?.name || user.email?.split("@")[0]}
+            </p>
           </div>
-          <Button asChild>
-            <Link href="/">
+          <Button asChild className="bg-primary hover:bg-primary/90">
+            <Link href="/#generate">
               <Plus className="mr-2 h-4 w-4" />
               New Story
             </Link>
@@ -107,15 +113,15 @@ export default async function DashboardPage() {
         {/* Continue Listening */}
         {continueListening && (
           <div className="mb-8">
-            <h2 className="mb-4 text-sm font-semibold text-zinc-500">Continue Listening</h2>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+            <h2 className="mb-4 text-sm font-semibold text-muted-foreground">Continue Listening</h2>
+            <div className="rounded-xl border border-border bg-card/50 p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <Headphones className="h-5 w-5 text-emerald-500" />
-                    <h3 className="font-semibold text-white">{continueListening.title}</h3>
+                    <Headphones className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-foreground">{continueListening.title}</h3>
                   </div>
-                  <p className="mt-1 text-sm text-zinc-400">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {continueListening.narrative_style} • {formatDuration(continueListening.actual_duration_seconds)}{" "}
                     total
                   </p>
@@ -126,9 +132,9 @@ export default async function DashboardPage() {
                           (continueListening.actual_duration_seconds || 1)) *
                         100
                       }
-                      className="h-1 bg-zinc-800"
+                      className="h-1"
                     />
-                    <p className="mt-1 text-xs text-zinc-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {formatDuration(
                         (continueListening.actual_duration_seconds || 0) -
                           (continueListening.last_played_position || 0),
@@ -137,12 +143,7 @@ export default async function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <Button asChild>
-                  <Link href={`/story/${continueListening.id}`}>
-                    <Play className="mr-2 h-4 w-4" />
-                    Resume
-                  </Link>
-                </Button>
+                <AudioPlayer audioUrl={continueListening.audio_url} /> {/* Add client component for play buttons */}
               </div>
             </div>
           </div>
@@ -151,9 +152,9 @@ export default async function DashboardPage() {
         {/* User's Stories */}
         <div className="mb-12">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-zinc-500">Your Stories</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground">Your Stories</h2>
             {userStories && userStories.length > 0 && (
-              <span className="text-xs text-zinc-500">{userStories.length} stories</span>
+              <span className="text-xs text-muted-foreground">{userStories.length} stories</span>
             )}
           </div>
 
@@ -162,15 +163,15 @@ export default async function DashboardPage() {
               {userStories.map((story: any) => (
                 <div
                   key={story.id}
-                  className="group rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 transition-colors hover:border-emerald-500/50"
+                  className="group rounded-xl border border-border bg-card/30 p-4 transition-all hover:border-primary/50 card-glow"
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3">
-                        <h3 className="truncate font-medium text-white">{story.title}</h3>
+                        <h3 className="truncate font-medium text-foreground">{story.title}</h3>
                         {getStatusBadge(story.status)}
                       </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-500">
+                      <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                         {story.code_repositories && (
                           <span>
                             {story.code_repositories.repo_owner}/{story.code_repositories.repo_name}
@@ -189,8 +190,10 @@ export default async function DashboardPage() {
                       {/* Progress for in-progress stories */}
                       {story.status !== "completed" && story.status !== "failed" && (
                         <div className="mt-3">
-                          <Progress value={story.progress} className="h-1 bg-zinc-800" />
-                          <p className="mt-1 text-xs text-zinc-500">{story.progress_message || "Processing..."}</p>
+                          <Progress value={story.progress} className="h-1" />
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {story.progress_message || "Processing..."}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -199,34 +202,24 @@ export default async function DashboardPage() {
                     <div className="flex items-center gap-2">
                       {story.status === "completed" && (
                         <>
-                          <Button variant="ghost" size="icon" asChild className="text-zinc-400 hover:text-white">
-                            <Link href={`/story/${story.id}`}>
-                              <Play className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
+                          <AudioPlayer audioUrl={story.audio_url} /> {/* Add client component for play buttons */}
+                          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                             <Download className="h-4 w-4" />
                           </Button>
                         </>
                       )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
+                          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
-                          <DropdownMenuItem asChild className="text-zinc-300 focus:text-white focus:bg-zinc-800">
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
                             <Link href={`/story/${story.id}`}>View Details</Link>
                           </DropdownMenuItem>
-                          {story.status === "completed" && (
-                            <DropdownMenuItem className="text-zinc-300 focus:text-white focus:bg-zinc-800">
-                              Regenerate
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem className="text-red-400 focus:text-red-300 focus:bg-zinc-800">
-                            Delete
-                          </DropdownMenuItem>
+                          {story.status === "completed" && <DropdownMenuItem>Regenerate</DropdownMenuItem>}
+                          <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -235,12 +228,12 @@ export default async function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/30 p-12 text-center">
-              <Headphones className="mx-auto h-12 w-12 text-zinc-600" />
-              <h3 className="mt-4 text-lg font-semibold text-white">No stories yet</h3>
-              <p className="mt-2 text-zinc-500">Transform your first code repository into an audio narrative.</p>
-              <Button asChild className="mt-6">
-                <Link href="/">
+            <div className="rounded-xl border border-dashed border-border bg-card/30 p-12 text-center">
+              <Headphones className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold text-foreground">No stories yet</h3>
+              <p className="mt-2 text-muted-foreground">Transform your first code repository into an audio story.</p>
+              <Button asChild className="mt-6 bg-primary hover:bg-primary/90">
+                <Link href="/#generate">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Your First Story
                 </Link>
@@ -250,27 +243,33 @@ export default async function DashboardPage() {
         </div>
 
         {/* Discover Section */}
-        {trendingStories && trendingStories.length > 0 && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-                <h2 className="text-sm font-semibold text-zinc-500">Trending in Community</h2>
-              </div>
-              <Button variant="ghost" size="sm" asChild className="text-zinc-400 hover:text-white">
-                <Link href="/discover">
-                  <Compass className="mr-2 h-4 w-4" />
-                  View All
-                </Link>
-              </Button>
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold text-muted-foreground">Discover Community Stories</h2>
             </div>
+            <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
+              <Link href="/discover">
+                <Compass className="mr-2 h-4 w-4" />
+                Browse All
+              </Link>
+            </Button>
+          </div>
+
+          {trendingStories && trendingStories.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {trendingStories.map((story: any) => (
-                <PublicStoryCard key={story.id} story={story} />
+                <ChronicleCard key={story.id} story={story} variant="grid" />
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="rounded-xl border border-dashed border-border bg-card/30 p-8 text-center">
+              <Compass className="mx-auto h-10 w-10 text-muted-foreground" />
+              <p className="mt-3 text-muted-foreground">No community stories yet. Be the first to share!</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
