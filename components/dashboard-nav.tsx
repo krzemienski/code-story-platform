@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Settings, LogOut, Menu, X, Headphones, Compass, Github, Search, BookOpen } from "lucide-react"
+import { Plus, Settings, LogOut, Menu, X, Headphones, Compass, Github, Search, Radio } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { useState } from "react"
@@ -21,6 +21,7 @@ import type { Profile } from "@/lib/types"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import { setDemoMode } from "@/lib/demo-mode"
 import { Input } from "@/components/ui/input"
+import { useAudioPlayerContext } from "@/lib/audio-player-context"
 
 interface DashboardNavProps {
   user: SupabaseUser
@@ -33,6 +34,7 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const { currentItem, isPlaying, setPlayerExpanded, isPlayerVisible } = useAudioPlayerContext()
 
   const handleSignOut = async () => {
     if (isDemo) {
@@ -57,12 +59,11 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
   const navItems = [
     { href: "/dashboard", label: "My Stories", icon: Headphones },
     { href: "/discover", label: "Discover", icon: Compass },
-    { href: "/docs", label: "Docs", icon: BookOpen },
   ]
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+      <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left section: Logo + Nav */}
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center">
@@ -95,7 +96,7 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search stories, repos, topics..."
+              placeholder="Search stories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 bg-secondary/50 border-transparent focus:border-border"
@@ -105,8 +106,34 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
 
         {/* Right section: Actions + Profile */}
         <div className="flex items-center gap-3">
+          {isPlayerVisible && currentItem && (
+            <button
+              onClick={() => setPlayerExpanded(true)}
+              className={cn(
+                "hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-colors",
+                isPlaying
+                  ? "bg-primary/20 text-primary border border-primary/30"
+                  : "bg-secondary text-muted-foreground border border-border",
+              )}
+            >
+              {isPlaying && (
+                <span className="flex items-center gap-[2px]">
+                  {[...Array(3)].map((_, i) => (
+                    <span
+                      key={i}
+                      className="w-0.5 h-3 bg-primary rounded-full animate-waveform"
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    />
+                  ))}
+                </span>
+              )}
+              {!isPlaying && <Radio className="h-3 w-3" />}
+              <span className="max-w-[100px] truncate">{currentItem.title}</span>
+            </button>
+          )}
+
           <a
-            href="https://github.com/codestory/codestory"
+            href="https://github.com/krzemienski/code-story-platform"
             target="_blank"
             rel="noopener noreferrer"
             className="hidden md:flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -114,8 +141,8 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
             <Github className="h-4 w-4" />
           </a>
 
-          <Button asChild size="sm" className="hidden sm:flex">
-            <Link href="/">
+          <Button asChild size="sm" className="hidden sm:flex bg-primary hover:bg-primary/90">
+            <Link href="/#generate">
               <Plus className="mr-2 h-4 w-4" />
               New Story
             </Link>
@@ -123,7 +150,7 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-500 ring-2 ring-emerald-500/20 transition-all hover:ring-emerald-500/40">
+              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary ring-2 ring-primary/20 transition-all hover:ring-primary/40">
                 {profile?.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
               </button>
             </DropdownMenuTrigger>
@@ -175,11 +202,39 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
       {/* Mobile menu */}
       <div
         className={cn(
-          "overflow-hidden border-b border-border bg-background transition-all duration-300 md:hidden",
-          mobileMenuOpen ? "max-h-80" : "max-h-0 border-b-0",
+          "overflow-hidden border-b border-border/50 bg-background transition-all duration-300 md:hidden",
+          mobileMenuOpen ? "max-h-96" : "max-h-0 border-b-0",
         )}
       >
         <div className="flex flex-col gap-2 p-4">
+          {isPlayerVisible && currentItem && (
+            <button
+              onClick={() => {
+                setPlayerExpanded(true)
+                setMobileMenuOpen(false)
+              }}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-colors mb-2",
+                isPlaying ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground",
+              )}
+            >
+              {isPlaying ? (
+                <span className="flex items-center gap-[2px]">
+                  {[...Array(3)].map((_, i) => (
+                    <span
+                      key={i}
+                      className="w-0.5 h-3 bg-primary rounded-full animate-waveform"
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    />
+                  ))}
+                </span>
+              ) : (
+                <Radio className="h-4 w-4" />
+              )}
+              <span className="truncate">Now Playing: {currentItem.title}</span>
+            </button>
+          )}
+
           {/* Mobile search */}
           <form onSubmit={handleSearch} className="mb-2">
             <div className="relative">
@@ -200,7 +255,7 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
               href={item.href}
               onClick={() => setMobileMenuOpen(false)}
               className={cn(
-                "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors",
                 pathname === item.href
                   ? "bg-secondary text-foreground"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground",
@@ -212,17 +267,17 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
           ))}
 
           <a
-            href="https://github.com/codestory/codestory"
+            href="https://github.com/krzemienski/code-story-platform"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground"
+            className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-muted-foreground"
           >
             <Github className="h-4 w-4" />
             GitHub
           </a>
 
-          <Button asChild size="sm" className="mt-2">
-            <Link href="/" onClick={() => setMobileMenuOpen(false)}>
+          <Button asChild size="sm" className="mt-2 bg-primary hover:bg-primary/90">
+            <Link href="/#generate" onClick={() => setMobileMenuOpen(false)}>
               <Plus className="mr-2 h-4 w-4" />
               New Story
             </Link>

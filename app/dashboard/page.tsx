@@ -7,7 +7,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Progress } from "@/components/ui/progress"
 import { ChronicleCard } from "@/components/chronicle-card"
 import { ParallaxBackground } from "@/components/parallax-background"
-import { Navbar } from "@/components/navbar"
 import { AudioPlayer } from "@/components/audio-player" // Import client component for audio context
 
 function formatDuration(seconds: number | null): string {
@@ -91,7 +90,6 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-background relative">
       <ParallaxBackground />
-      <Navbar />
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
