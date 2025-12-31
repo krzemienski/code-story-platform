@@ -19,15 +19,25 @@ export function Logo({ className, showText = true, size = "md" }: LogoProps) {
     <div className={cn("flex items-center gap-2", className)}>
       <div className="relative flex items-center justify-center">
         <svg viewBox="0 0 24 24" fill="none" className={cn("text-primary", s.icon)}>
-          {/* Diamond/rhombus shape */}
-          <path d="M12 2L22 12L12 22L2 12L12 2Z" fill="currentColor" fillOpacity="0.9" />
-          {/* Inner play symbol */}
-          <path d="M10 8L16 12L10 16V8Z" fill="white" fillOpacity="0.9" />
+          {/* Book/story shape with code brackets */}
+          <path
+            d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V20C20 21.1046 19.1046 22 18 22H6C4.89543 22 4 21.1046 4 20V4Z"
+            fill="currentColor"
+            fillOpacity="0.9"
+          />
+          {/* Code brackets inside */}
+          <path
+            d="M9 8L6 12L9 16M15 8L18 12L15 16"
+            stroke="white"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </div>
       {showText && (
         <span className={cn("font-semibold tracking-tight text-foreground", s.text)}>
-          Code<span className="text-primary">.</span>Story
+          Code<span className="text-primary">Tale</span>
         </span>
       )}
     </div>

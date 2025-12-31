@@ -1,21 +1,21 @@
-# Code Story
+# CodeTale
 
-**Transform GitHub repositories into immersive audio narratives.**
+**Transform GitHub repositories into immersive audio stories.**
 
-Code Story is an open-source platform that analyzes code repositories and generates engaging audio stories using AI. Perfect for understanding new codebases, onboarding developers, or experiencing the art of software architecture through sound.
+CodeTale is an open-source platform that analyzes code repositories and generates engaging audio stories using AI. Perfect for understanding new codebases, onboarding developers, or experiencing the art of software architecture through sound.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/krzemienski/code-story-platform)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
 
-Code Story transforms any public GitHub repository into an audio experience. Whether you prefer a fictional adventure through code, a documentary-style exploration, or a technical deep-dive, our AI agents analyze the repository structure, understand the architecture, and craft a narrative tailored to your preferences.
+CodeTale transforms any public GitHub repository into an audio experience. Whether you prefer a fictional adventure through code, a documentary-style exploration, or a technical deep-dive, our AI agents analyze the repository structure, understand the architecture, and craft a story tailored to your preferences.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           CODE STORY PLATFORM                                │
+│                              CODETALE PLATFORM                               │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌───────────┐ │
@@ -101,7 +101,7 @@ code-story-platform/
 │   └── types.ts                     # TypeScript type definitions
 │
 └── scripts/
-    ├── 001_create_codestory_tables.sql
+    ├── 001_create_codetale_tables.sql
     ├── 002_create_profile_trigger.sql
     ├── 003_create_storage_bucket.sql
     ├── 004_add_play_count_function.sql
@@ -142,7 +142,7 @@ The **Narrator Agent** uses Claude to generate a script based on:
 const result = await generateText({
   model: "anthropic/claude-sonnet-4-20250514",
   system: getStoryPrompt(style, expertise, targetMinutes),
-  prompt: `Create an audio narrative for ${repo}...`,
+  prompt: `Create an audio story for ${repo}...`,
   maxTokens: estimatedTokensNeeded,
   temperature: 0.8
 })
@@ -269,7 +269,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000)
+Visit [http://localhost:3000](http://localhost:3000) or [https://codetale.ai](https://codetale.ai)
 
 ## API Reference
 
@@ -319,6 +319,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Links
 
+- **Website**: [codetale.ai](https://codetale.ai)
 - **Repository**: [github.com/krzemienski/code-story-platform](https://github.com/krzemienski/code-story-platform)
 - **Issues**: [Report bugs or request features](https://github.com/krzemienski/code-story-platform/issues)
 

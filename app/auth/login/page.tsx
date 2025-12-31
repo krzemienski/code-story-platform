@@ -54,7 +54,7 @@ export default function LoginPage() {
         <Card className="border-border bg-card">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-foreground">Welcome back</CardTitle>
-            <CardDescription className="text-muted-foreground">Sign in to your Code Story account</CardDescription>
+            <CardDescription className="text-muted-foreground">Sign in to your CodeTale account</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin}>

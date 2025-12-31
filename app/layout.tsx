@@ -11,15 +11,21 @@ const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfa
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
 
 export const metadata: Metadata = {
-  title: "Code Story - Transform Code into Audio Stories",
+  title: "CodeTale - Transform Code into Audio Stories",
   description:
     "The open-source platform that transforms code repositories into immersive audio stories. Built for developers, by developers.",
-  keywords: ["code", "audio", "story", "developer", "open-source", "AI", "documentation"],
-  authors: [{ name: "Code Story" }],
+  keywords: ["code", "audio", "story", "developer", "open-source", "AI", "documentation", "codetale"],
+  authors: [{ name: "CodeTale" }],
   openGraph: {
-    title: "Code Story",
+    title: "CodeTale",
     description: "Transform code repositories into audio stories",
     type: "website",
+    url: "https://codetale.ai",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CodeTale",
+    description: "Transform code repositories into audio stories",
   },
     generator: 'v0.app'
 }

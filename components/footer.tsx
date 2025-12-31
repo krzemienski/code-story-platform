@@ -10,11 +10,11 @@ export function Footer() {
           <div className="space-y-4">
             <Logo />
             <p className="text-sm text-muted-foreground">
-              Transform code repositories into audio narratives. Open source, developer-first.
+              Transform code repositories into audio stories. Open source, developer-first.
             </p>
             <div className="flex gap-4">
               <a
-                href="https://github.com/codestory/codestory"
+                href="https://github.com/krzemienski/code-story-platform"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground transition-colors hover:text-foreground"
@@ -23,7 +23,7 @@ export function Footer() {
                 <Github className="h-5 w-5" />
               </a>
               <a
-                href="https://twitter.com/codestory"
+                href="https://twitter.com/codetale_ai"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground transition-colors hover:text-foreground"
@@ -43,13 +43,13 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground">
-                  Pricing
+                <Link href="/discover" className="text-sm text-muted-foreground hover:text-foreground">
+                  Discover
                 </Link>
               </li>
               <li>
-                <Link href="/changelog" className="text-sm text-muted-foreground hover:text-foreground">
-                  Changelog
+                <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground">
+                  How It Works
                 </Link>
               </li>
             </ul>
@@ -64,18 +64,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/api" className="text-sm text-muted-foreground hover:text-foreground">
-                  API Reference
-                </Link>
-              </li>
-              <li>
-                <Link href="/self-hosting" className="text-sm text-muted-foreground hover:text-foreground">
-                  Self-Hosting
-                </Link>
-              </li>
-              <li>
                 <a
-                  href="https://github.com/codestory/codestory"
+                  href="https://github.com/krzemienski/code-story-platform"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-muted-foreground hover:text-foreground"
@@ -83,31 +73,51 @@ export function Footer() {
                   GitHub
                 </a>
               </li>
+              <li>
+                <a
+                  href="https://github.com/krzemienski/code-story-platform#self-hosting"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Self-Hosting
+                </a>
+              </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="mb-4 text-sm font-semibold text-foreground">Company</h3>
+            <h3 className="mb-4 text-sm font-semibold text-foreground">Community</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground">
-                  About
-                </Link>
+                <a
+                  href="https://discord.gg/codetale"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Discord
+                </a>
               </li>
               <li>
-                <Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground">
-                  Blog
-                </Link>
+                <a
+                  href="https://twitter.com/codetale_ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Twitter
+                </a>
               </li>
               <li>
-                <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
-                  Privacy
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
-                  Terms
-                </Link>
+                <a
+                  href="https://github.com/krzemienski/code-story-platform/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Report Issues
+                </a>
               </li>
             </ul>
           </div>
@@ -115,7 +125,7 @@ export function Footer() {
 
         <div className="mt-12 border-t border-border pt-8">
           <p className="text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Code Story. MIT License.
+            © {new Date().getFullYear()} CodeTale. MIT License.
           </p>
         </div>
       </div>

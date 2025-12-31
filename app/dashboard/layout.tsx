@@ -11,7 +11,7 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const cookieStore = await cookies()
-  const isDemo = cookieStore.get("codestory_demo")?.value === "true"
+  const isDemo = cookieStore.get("codetale_demo")?.value === "true"
 
   // If demo mode, use mock data
   if (isDemo) {

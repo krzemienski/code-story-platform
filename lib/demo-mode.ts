@@ -2,7 +2,7 @@
 
 export const DEMO_USER = {
   id: "demo-user-id",
-  email: "demo@codestory.dev",
+  email: "demo@codetale.ai",
   user_metadata: {
     name: "Demo User",
   },
@@ -10,7 +10,7 @@ export const DEMO_USER = {
 
 export const DEMO_PROFILE = {
   id: "demo-user-id",
-  email: "demo@codestory.dev",
+  email: "demo@codetale.ai",
   name: "Demo User",
   avatar_url: null,
   subscription_tier: "free",
@@ -39,7 +39,7 @@ export const DEMO_STORIES = [
     progress: 100,
     progress_message: "Complete",
     audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    transcript: "Welcome to Code Story. Today we're exploring React, one of the most popular JavaScript libraries...",
+    transcript: "Welcome to CodeTale. Today we're exploring React, one of the most popular JavaScript libraries...",
     play_count: 3,
     last_played_position: 245,
     is_public: false,
@@ -166,13 +166,13 @@ export const DEMO_CHAPTERS = [
 
 export function isDemoMode(): boolean {
   if (typeof window === "undefined") return false
-  return document.cookie.includes("codestory_demo=true")
+  return document.cookie.includes("codetale_demo=true")
 }
 
 export function setDemoMode(enabled: boolean): void {
   if (enabled) {
-    document.cookie = "codestory_demo=true; path=/; max-age=86400" // 24 hours
+    document.cookie = "codetale_demo=true; path=/; max-age=86400" // 24 hours
   } else {
-    document.cookie = "codestory_demo=; path=/; max-age=0"
+    document.cookie = "codetale_demo=; path=/; max-age=0"
   }
 }

@@ -16,7 +16,7 @@ export default function DocsPage() {
           <Badge variant="secondary" className="mb-4">
             Documentation
           </Badge>
-          <h1 className="text-4xl font-bold tracking-tight text-foreground mb-4">How Code Story Works</h1>
+          <h1 className="text-4xl font-bold tracking-tight text-foreground mb-4">How CodeTale Works</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Transform any GitHub repository into an engaging audio narrative. Perfect for learning codebases,
             onboarding, or just enjoying code as a story.
@@ -205,16 +205,16 @@ export default function DocsPage() {
               <Terminal className="h-5 w-5" />
               Self-Hosting
             </CardTitle>
-            <CardDescription>Run Code Story on your own infrastructure</CardDescription>
+            <CardDescription>Run CodeTale on your own infrastructure</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Code Story is open source. You can self-host it with your own API keys for Claude (Anthropic) and
+              CodeTale is open source. You can self-host it with your own API keys for Claude (Anthropic) and
               ElevenLabs.
             </p>
             <div className="rounded-lg bg-zinc-900 p-4 font-mono text-sm text-zinc-300">
               <p className="text-zinc-500"># Clone the repository</p>
-              <p>git clone https://github.com/codestory/codestory</p>
+              <p>git clone https://github.com/krzemienski/code-story-platform</p>
               <p className="mt-2 text-zinc-500"># Install dependencies</p>
               <p>pnpm install</p>
               <p className="mt-2 text-zinc-500"># Set up environment variables</p>
@@ -223,7 +223,7 @@ export default function DocsPage() {
               <p>pnpm dev</p>
             </div>
             <Button variant="outline" asChild>
-              <a href="https://github.com/codestory/codestory" target="_blank" rel="noopener noreferrer">
+              <a href="https://github.com/krzemienski/code-story-platform" target="_blank" rel="noopener noreferrer">
                 <Github className="mr-2 h-4 w-4" />
                 View on GitHub
                 <ExternalLink className="ml-2 h-3 w-3" />

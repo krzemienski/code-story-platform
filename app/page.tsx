@@ -168,7 +168,7 @@ export default async function HomePage() {
             <p className="text-3xl sm:text-4xl font-serif italic text-muted-foreground mb-6">for the love of code.</p>
 
             <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-              Code Story is fully open source. We believe that software architecture is an art form deserving of new
+              CodeTale is fully open source. We believe that software architecture is an art form deserving of new
               mediums of expression. Contribute to the engine, improve the audio generation, or expand the collection.
             </p>
 
@@ -180,7 +180,7 @@ export default async function HomePage() {
                 </a>
               </Button>
               <Button variant="outline" className="gap-2 bg-transparent border-border" asChild>
-                <a href="https://discord.gg/codestory" target="_blank" rel="noopener noreferrer">
+                <a href="https://discord.gg/codetale" target="_blank" rel="noopener noreferrer">
                   <Users className="h-4 w-4" />
                   Join Discord Community
                 </a>
@@ -195,14 +195,14 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-primary">
-              <path d="M12 2L22 12L12 22L2 12L12 2Z" />
+              <path d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V20C20 21.1046 19.1046 22 18 22H6C4.89543 22 4 21.1046 4 20V4Z" />
             </svg>
             <span className="font-semibold text-sm">
-              Code<span className="text-primary">Story</span>
+              Code<span className="text-primary">Tale</span>
             </span>
           </div>
 
-          <p className="text-xs text-muted-foreground">© 2025 Code Story. Licensed under MIT. The code is open.</p>
+          <p className="text-xs text-muted-foreground">© 2025 CodeTale. Licensed under MIT. The code is open.</p>
 
           <div className="flex items-center gap-6 text-xs text-muted-foreground">
             <Link href="/docs" className="hover:text-foreground transition-colors">

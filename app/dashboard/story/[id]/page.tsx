@@ -32,7 +32,7 @@ export default async function StoryPage({
 }) {
   const { id } = await params
   const cookieStore = await cookies()
-  const isDemo = cookieStore.get("codestory_demo")?.value === "true"
+  const isDemo = cookieStore.get("codetale_demo")?.value === "true"
 
   let story: any = null
   let chapters: any[] = []
