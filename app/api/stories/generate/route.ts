@@ -58,6 +58,9 @@ function splitTextIntoChunks(text: string, maxChars = 4000): string[] {
 }
 
 export async function POST(req: Request) {
+  const startTime = Date.now()
+  const TIMEOUT_WARNING_MS = 240000 // 4 minutes - warn before Vercel cuts us off
+
   try {
     const { storyId }: GenerateRequest = await req.json()
 
@@ -403,6 +406,22 @@ Output ONLY valid JSON, no other text:`,
         })
         .eq("id", storyId)
 
+      const elapsedMs = Date.now() - startTime
+      console.log("[v0] Elapsed time before audio synthesis:", Math.round(elapsedMs / 1000), "seconds")
+
+      if (elapsedMs > TIMEOUT_WARNING_MS) {
+        console.log("[v0] WARNING: Running low on time, may not complete audio synthesis")
+        await log.system(
+          storyId,
+          "Time warning - audio synthesis may be interrupted",
+          {
+            elapsedSeconds: Math.round(elapsedMs / 1000),
+            remainingSeconds: Math.round((300000 - elapsedMs) / 1000),
+          },
+          "warning",
+        )
+      }
+
       // ===== SYNTHESIZER AGENT =====
       await supabase
         .from("stories")
@@ -419,17 +438,13 @@ Output ONLY valid JSON, no other text:`,
       if (elevenLabsKey) {
         const voiceId = story.voice_id || "21m00Tcm4TlvDq8ikWAM"
 
-        // Use Flash v2.5 for longer content (40k char limit vs 10k for multilingual_v2)
-        // This allows larger chunks and faster generation
-        const useFlashModel = script.length > 20000
-        const modelId = useFlashModel ? "eleven_flash_v2_5" : "eleven_multilingual_v2"
-        const maxChunkSize = useFlashModel ? 8000 : 4000 // Larger chunks with Flash model
+        const modelId = "eleven_flash_v2_5"
+        const maxChunkSize = 10000 // Larger chunks for fewer API calls
 
         await log.synthesizer(storyId, "Initializing ElevenLabs voice synthesis", {
           voice: voiceId,
           model: modelId,
           totalScriptLength: script.length,
-          useFlashModel,
         })
 
         const scriptChunks = splitTextIntoChunks(script, maxChunkSize)
@@ -456,6 +471,51 @@ Output ONLY valid JSON, no other text:`,
           for (let i = 0; i < scriptChunks.length; i++) {
             const chunk = scriptChunks[i]
             const chunkNum = i + 1
+
+            const chunkElapsed = Date.now() - startTime
+            if (chunkElapsed > 270000) {
+              // 4.5 minutes - leave buffer for upload
+              console.log("[v0] TIMEOUT WARNING: Stopping audio generation to save progress")
+              await log.synthesizer(
+                storyId,
+                "Timeout - saving partial progress",
+                {
+                  completedChunks: i,
+                  totalChunks: scriptChunks.length,
+                },
+                "warning",
+              )
+
+              // Save what we have so far
+              if (chapterAudioUrls.length > 0) {
+                const partialDuration = Math.round(
+                  ((actualWords / scriptChunks.length) * chapterAudioUrls.length) / 2.5,
+                )
+
+                await supabase
+                  .from("stories")
+                  .update({
+                    audio_url: chapterAudioUrls[0],
+                    audio_chunks: chapterAudioUrls,
+                    actual_duration_seconds: partialDuration,
+                    status: "completed",
+                    progress: 100,
+                    progress_message: `Completed with ${chapterAudioUrls.length}/${scriptChunks.length} audio chunks (timeout)`,
+                    processing_completed_at: new Date().toISOString(),
+                  })
+                  .eq("id", storyId)
+
+                return Response.json({
+                  success: true,
+                  partial: true,
+                  audioUrl: chapterAudioUrls[0],
+                  audioChunks: chapterAudioUrls,
+                  completedChunks: chapterAudioUrls.length,
+                  totalChunks: scriptChunks.length,
+                })
+              }
+              break
+            }
 
             console.log(`[v0] Processing chunk ${chunkNum}/${scriptChunks.length}, length: ${chunk.length}`)
 
@@ -587,7 +647,7 @@ Output ONLY valid JSON, no other text:`,
             .from("stories")
             .update({
               progress: 95,
-              progress_message: "Finalizing story...",
+              progress_message: "Finalizing tale...",
             })
             .eq("id", storyId)
 
@@ -619,7 +679,7 @@ Output ONLY valid JSON, no other text:`,
 
           await log.system(
             storyId,
-            "Story generation complete!",
+            "Tale generation complete!",
             {
               totalDuration: estimatedDuration,
               chapters: updatedChapters.length,
@@ -636,7 +696,7 @@ Output ONLY valid JSON, no other text:`,
               actual_duration_seconds: estimatedDuration,
               status: "completed",
               progress: 100,
-              progress_message: "Story generated successfully!",
+              progress_message: "Tale generated successfully!",
               processing_completed_at: new Date().toISOString(),
             })
             .eq("id", storyId)
@@ -645,7 +705,7 @@ Output ONLY valid JSON, no other text:`,
             console.error("[v0] Final update error:", finalUpdateError)
           }
 
-          console.log("[v0] Story generation complete!")
+          console.log("[v0] Tale generation complete!")
 
           return Response.json({
             success: true,
