@@ -296,8 +296,12 @@ export function StoryPlayer({
     if (effectiveAudioChunks.length === 0) return
 
     try {
-      const url = effectiveAudioChunks[0]
-      const response = await fetch(url)
+      const response = await fetch(`/api/stories/${storyId}/download`)
+
+      if (!response.ok) {
+        throw new Error("Download failed")
+      }
+
       const blob = await response.blob()
       const blobUrl = URL.createObjectURL(blob)
 
@@ -308,11 +312,10 @@ export function StoryPlayer({
       link.click()
       document.body.removeChild(link)
 
-      // Clean up blob URL
       URL.revokeObjectURL(blobUrl)
     } catch (error) {
       console.error("[v0] Download failed:", error)
-      // Fallback to direct link
+      // Fallback to first chunk only
       window.open(effectiveAudioChunks[0], "_blank")
     }
   }
