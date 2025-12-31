@@ -174,7 +174,7 @@ export default async function HomePage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button variant="outline" className="gap-2 bg-transparent border-border" asChild>
-                <a href="https://github.com/codestory/codestory" target="_blank" rel="noopener noreferrer">
+                <a href="https://github.com/krzemienski/code-story-platform" target="_blank" rel="noopener noreferrer">
                   <Code className="h-4 w-4" />
                   View Source on GitHub
                 </a>
@@ -190,7 +190,7 @@ export default async function HomePage() {
         </section>
       </main>
 
-      {/* Footer - Removed API link */}
+      {/* Footer */}
       <footer className="border-t border-border py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -209,7 +209,7 @@ export default async function HomePage() {
               Documentation
             </Link>
             <a
-              href="https://github.com/codestory/codestory"
+              href="https://github.com/krzemienski/code-story-platform"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-foreground transition-colors"

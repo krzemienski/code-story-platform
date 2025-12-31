@@ -101,7 +101,7 @@ export function Navbar() {
             </button>
           )}
           <Link
-            href="https://github.com/krzemienski/codestory"
+            href="https://github.com/krzemienski/code-story-platform"
             target="_blank"
             rel="noopener noreferrer"
             className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -193,7 +193,7 @@ export function Navbar() {
             </Link>
           )}
           <Link
-            href="https://github.com/krzemienski/codestory"
+            href="https://github.com/krzemienski/code-story-platform"
             target="_blank"
             className="px-3 py-2.5 text-sm text-muted-foreground rounded-lg"
             onClick={() => setMobileMenuOpen(false)}
