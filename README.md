@@ -18,7 +18,7 @@ Code Story is an open-source, developer-first platform that analyzes GitHub repo
 │  │  │  Page       │  │  /dashboard │  │  Creation   │  │  Component  │     │   │
 │  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘     │   │
 │  │                                                                           │   │
-│  │  Components: shadcn/ui + ElevenLabs UI (Orb, Waveform, Conversation)     │   │
+│  │  Components: shadcn/ui + Waveform Visualization + Real-time Logs         │   │
 │  └──────────────────────────────────────────────────────────────────────────┘   │
 │                                      │                                          │
 │                                      ▼                                          │
@@ -35,16 +35,55 @@ Code Story is an open-source, developer-first platform that analyzes GitHub repo
 │                                      │                                          │
 │                                      ▼                                          │
 │  ┌──────────────────────────────────────────────────────────────────────────┐   │
+│  │                    ADVANCED CODE SYNTHESIS SYSTEM                         │   │
+│  │                                                                           │   │
+│  │  ┌─────────────────────────────────────────────────────────────────────┐ │   │
+│  │  │                    MULTI-PASS ANALYSIS ENGINE                        │ │   │
+│  │  │                                                                      │ │   │
+│  │  │  Pass 1: Symbol Extraction    Pass 2: Dependency Graph              │ │   │
+│  │  │  ├─ Classes, Functions       ├─ Import/Export mapping              │ │   │
+│  │  │  ├─ Interfaces, Types        ├─ Cross-file references             │ │   │
+│  │  │  └─ Language detection        └─ Coupling strength (1-10)          │ │   │
+│  │  │                                                                      │ │   │
+│  │  │  Pass 3: AI Module Analysis   Pass 4: Architecture Layers          │ │   │
+│  │  │  ├─ Purpose identification    ├─ Presentation layer               │ │   │
+│  │  │  ├─ Complexity scoring        ├─ Business logic layer             │ │   │
+│  │  │  └─ Pattern detection         └─ Data/Infrastructure layer        │ │   │
+│  │  │                                                                      │ │   │
+│  │  │  Pass 5: Design Pattern Recognition                                 │ │   │
+│  │  │  ├─ Singleton, Factory, Repository                                 │ │   │
+│  │  │  ├─ Service Layer, Middleware                                      │ │   │
+│  │  │  └─ React Hooks, MVC patterns                                      │ │   │
+│  │  └─────────────────────────────────────────────────────────────────────┘ │   │
+│  │                                   │                                       │   │
+│  │                                   ▼                                       │   │
+│  │  ┌─────────────────────────────────────────────────────────────────────┐ │   │
+│  │  │                    CODEBASE INDEX (Output)                          │ │   │
+│  │  │                                                                      │ │   │
+│  │  │  files[]        → Full content + language + token count            │ │   │
+│  │  │  symbols[]      → All code symbols with line numbers               │ │   │
+│  │  │  modules[]      → AI-analyzed modules with purpose                 │ │   │
+│  │  │  layers[]       → Architecture layers identified                   │ │   │
+│  │  │  dependencies[] → Directed graph of all imports/uses               │ │   │
+│  │  │  patterns[]     → Design patterns found + locations                │ │   │
+│  │  │  entryPoints[]  → Main files (index.ts, main.go, etc.)            │ │   │
+│  │  │  coreModules[]  → Most-depended-upon modules                       │ │   │
+│  │  │  metrics{}      → Files, lines, tokens, language breakdown        │ │   │
+│  │  └─────────────────────────────────────────────────────────────────────┘ │   │
+│  └──────────────────────────────────────────────────────────────────────────┘   │
+│                                      │                                          │
+│                                      ▼                                          │
+│  ┌──────────────────────────────────────────────────────────────────────────┐   │
 │  │                       AI AGENT PIPELINE                                   │   │
 │  │                                                                           │   │
 │  │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌───────────┐ │   │
 │  │  │  ANALYZER   │ -> │  ARCHITECT  │ -> │  NARRATOR   │ -> │SYNTHESIZER│ │   │
 │  │  │  Agent      │    │  Agent      │    │  Agent      │    │  Agent    │ │   │
 │  │  │             │    │             │    │             │    │           │ │   │
-│  │  │ - GitHub    │    │ - Dependency│    │ - Script    │    │ - Chunk   │ │   │
-│  │  │   API       │    │   graph     │    │   generation│    │   text    │ │   │
-│  │  │ - Structure │    │ - Pattern   │    │ - Chapter   │    │ - TTS API │ │   │
-│  │  │   analysis  │    │   detection │    │   breakdown │    │ - Combine │ │   │
+│  │  │ - Deep code │    │ - Dependency│    │ - Outline   │    │ - Chunk   │ │   │
+│  │  │   analysis  │    │   graph     │    │   generation│    │   text    │ │   │
+│  │  │ - 5-pass    │    │ - Layer     │    │ - Per-chapter│   │ - TTS API │ │   │
+│  │  │   indexing  │    │   detection │    │   writing   │    │ - Upload  │ │   │
 │  │  └─────────────┘    └─────────────┘    └─────────────┘    └───────────┘ │   │
 │  │        │                  │                  │                  │        │   │
 │  │        └──────────────────┴──────────────────┴──────────────────┘        │   │
@@ -80,6 +119,209 @@ Code Story is an open-source, developer-first platform that analyzes GitHub repo
 │  │                                                                           │   │
 │  │  + code_repositories, story_intents, story_chapters (with RLS)           │   │
 │  └──────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Advanced Code Synthesis System
+
+The platform uses a sophisticated multi-pass analysis engine inspired by tools like RepoMix to deeply understand codebases:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        CODE SYNTHESIS PIPELINE                                   │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐│
+│  │ REPOSITORY CONTENT FETCHER                                                  ││
+│  │ ┌─────────────────────────────────────────────────────────────────────────┐ ││
+│  │ │ • Fetch full repository tree from GitHub API                            │ ││
+│  │ │ • Filter: Skip node_modules, .git, dist, build, __pycache__            │ ││
+│  │ │ • Priority: README > package.json > src/ > lib/ > root files           │ ││
+│  │ │ • Limits: 200 files max, 100KB per file, 5MB total                     │ ││
+│  │ │ • Batch processing with rate limiting                                   │ ││
+│  │ └─────────────────────────────────────────────────────────────────────────┘ ││
+│  │ Output: CodeFile[] with path, content, language, size, tokenCount          ││
+│  └─────────────────────────────────────────────────────────────────────────────┘│
+│                                      │                                          │
+│                                      ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐│
+│  │ PASS 1: SYMBOL EXTRACTION                                                   ││
+│  │ ┌─────────────────────────────────────────────────────────────────────────┐ ││
+│  │ │ Language-specific regex patterns for:                                   │ ││
+│  │ │                                                                         │ ││
+│  │ │ TypeScript/JavaScript:     Python:           Go:                       │ ││
+│  │ │ ├─ class definitions      ├─ class          ├─ struct                 │ ││
+│  │ │ ├─ function/arrow fn      ├─ def functions  ├─ interface              │ ││
+│  │ │ ├─ interface/type         └─ imports        ├─ func                   │ ││
+│  │ │ └─ import/export                            └─ import                 │ ││
+│  │ │                                                                         │ ││
+│  │ │ Rust:                      Java/Kotlin:      PHP/Ruby:                 │ ││
+│  │ │ ├─ struct/enum            ├─ class          ├─ class                  │ ││
+│  │ │ ├─ trait/impl             ├─ interface      ├─ module                 │ ││
+│  │ │ └─ fn definitions         └─ methods        └─ functions              │ ││
+│  │ └─────────────────────────────────────────────────────────────────────────┘ ││
+│  │ Output: CodeSymbol[] with name, type, filePath, startLine, endLine         ││
+│  └─────────────────────────────────────────────────────────────────────────────┘│
+│                                      │                                          │
+│                                      ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐│
+│  │ PASS 2: DEPENDENCY GRAPH CONSTRUCTION                                       ││
+│  │ ┌─────────────────────────────────────────────────────────────────────────┐ ││
+│  │ │ For each file:                                                          │ ││
+│  │ │ 1. Extract import statements → map to target modules                   │ ││
+│  │ │ 2. Calculate coupling strength (1-10) based on import count            │ ││
+│  │ │                                                                         │ ││
+│  │ │ For each symbol:                                                        │ ││
+│  │ │ 1. Search for references in other files                                │ ││
+│  │ │ 2. Build bidirectional dependency/dependent lists                      │ ││
+│  │ │                                                                         │ ││
+│  │ │ Edge types: import | extends | implements | uses | creates             │ ││
+│  │ └─────────────────────────────────────────────────────────────────────────┘ ││
+│  │ Output: DependencyEdge[] with from, to, type, strength                     ││
+│  └─────────────────────────────────────────────────────────────────────────────┘│
+│                                      │                                          │
+│                                      ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐│
+│  │ PASS 3: AI MODULE ANALYSIS (Claude)                                         ││
+│  │ ┌─────────────────────────────────────────────────────────────────────────┐ ││
+│  │ │ For each directory (up to 20):                                          │ ││
+│  │ │ 1. Collect file names + extracted symbols                              │ ││
+│  │ │ 2. Sample first 2000 chars of main file                                │ ││
+│  │ │ 3. Send to Claude with structured output schema                        │ ││
+│  │ │                                                                         │ ││
+│  │ │ Claude returns:                                                         │ ││
+│  │ │ ├─ purpose: One-sentence description                                   │ ││
+│  │ │ ├─ complexity: low | medium | high                                     │ ││
+│  │ │ └─ keyPatterns: Design patterns used                                   │ ││
+│  │ └─────────────────────────────────────────────────────────────────────────┘ ││
+│  │ Output: ModuleAnalysis[] with path, purpose, exports, imports, complexity  ││
+│  └─────────────────────────────────────────────────────────────────────────────┘│
+│                                      │                                          │
+│                                      ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐│
+│  │ PASS 4: ARCHITECTURE LAYER DETECTION (Claude)                               ││
+│  │ ┌─────────────────────────────────────────────────────────────────────────┐ ││
+│  │ │ Input: All ModuleAnalysis summaries                                     │ ││
+│  │ │                                                                         │ ││
+│  │ │ Claude identifies 3-6 layers:                                          │ ││
+│  │ │ ├─ Presentation/UI layer                                               │ ││
+│  │ │ ├─ Application/Service layer                                           │ ││
+│  │ │ ├─ Domain/Business logic layer                                         │ ││
+│  │ │ ├─ Infrastructure/Data layer                                           │ ││
+│  │ │ └─ Shared/Common utilities                                             │ ││
+│  │ │                                                                         │ ││
+│  │ │ Each layer includes:                                                    │ ││
+│  │ │ ├─ name & description                                                  │ ││
+│  │ │ ├─ modules belonging to this layer                                     │ ││
+│  │ │ ├─ responsibilities                                                    │ ││
+│  │ │ └─ dependencies on other layers                                        │ ││
+│  │ └─────────────────────────────────────────────────────────────────────────┘ ││
+│  │ Output: ArchitectureLayer[]                                                 ││
+│  └─────────────────────────────────────────────────────────────────────────────┘│
+│                                      │                                          │
+│                                      ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐│
+│  │ PASS 5: DESIGN PATTERN RECOGNITION                                          ││
+│  │ ┌─────────────────────────────────────────────────────────────────────────┐ ││
+│  │ │ Pattern detection via symbol name analysis:                             │ ││
+│  │ │                                                                         │ ││
+│  │ │ Singleton     → *instance*, *singleton*                                │ ││
+│  │ │ Factory       → *factory*, *create*                                    │ ││
+│  │ │ Repository    → *repository*, *repo*                                   │ ││
+│  │ │ Service Layer → *service* (class type)                                 │ ││
+│  │ │ React Hooks   → use* (function type)                                   │ ││
+│  │ │ Middleware    → */middleware/* in path                                 │ ││
+│  │ │ Observer      → *observer*, *subscribe*, *emit*                        │ ││
+│  │ │ Strategy      → *strategy*, *handler*                                  │ ││
+│  │ └─────────────────────────────────────────────────────────────────────────┘ ││
+│  │ Output: Pattern[] with name, description, locations[]                       ││
+│  └─────────────────────────────────────────────────────────────────────────────┘│
+│                                      │                                          │
+│                                      ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐│
+│  │ FINAL OUTPUT: CodebaseIndex                                                 ││
+│  │ ┌─────────────────────────────────────────────────────────────────────────┐ ││
+│  │ │ {                                                                       │ ││
+│  │ │   files: CodeFile[],           // Full content + metadata              │ ││
+│  │ │   symbols: CodeSymbol[],       // All extracted symbols                │ ││
+│  │ │   modules: ModuleAnalysis[],   // AI-analyzed modules                  │ ││
+│  │ │   layers: ArchitectureLayer[], // Detected architecture                │ ││
+│  │ │   dependencies: DependencyEdge[], // Full dependency graph            │ ││
+│  │ │   entryPoints: string[],       // main.*, index.*, app.*              │ ││
+│  │ │   coreModules: string[],       // Most-depended-upon                   │ ││
+│  │ │   patterns: Pattern[],         // Design patterns found                │ ││
+│  │ │   metrics: {                                                           │ ││
+│  │ │     totalFiles, totalLines, totalTokens,                               │ ││
+│  │ │     languageBreakdown, avgFileSize, maxFileSize                        │ ││
+│  │ │   }                                                                     │ ││
+│  │ │ }                                                                       │ ││
+│  │ └─────────────────────────────────────────────────────────────────────────┘ ││
+│  └─────────────────────────────────────────────────────────────────────────────┘│
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Narrative Synthesis Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        NARRATIVE SYNTHESIS PIPELINE                              │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  Input: SynthesisContext                                                         │
+│  ├─ storyId, intent, expertiseLevel                                             │
+│  ├─ focusAreas[]                                                                │
+│  └─ CodebaseIndex (from analysis)                                               │
+│                                      │                                          │
+│                                      ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐│
+│  │ STEP 1: GENERATE NARRATIVE OUTLINE (Claude)                                 ││
+│  │                                                                              ││
+│  │ Input to Claude:                                                            ││
+│  │ ├─ User intent & focus areas                                                ││
+│  │ ├─ Codebase metrics (files, languages, entry points)                        ││
+│  │ ├─ Architecture layers                                                       ││
+│  │ ├─ Design patterns found                                                     ││
+│  │ └─ Key module summaries                                                      ││
+│  │                                                                              ││
+│  │ Output: 4-7 chapters with:                                                  ││
+│  │ ├─ title: "Introduction to the Architecture"                                ││
+│  │ ├─ summary: What this chapter covers                                        ││
+│  │ ├─ modules: Which code modules to reference                                 ││
+│  │ ├─ keySymbols: Specific classes/functions to explain                        ││
+│  │ └─ duration: Target minutes for this chapter                                ││
+│  └─────────────────────────────────────────────────────────────────────────────┘│
+│                                      │                                          │
+│                                      ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐│
+│  │ STEP 2: GENERATE CHAPTER CONTENT (Claude, per chapter)                      ││
+│  │                                                                              ││
+│  │ For each chapter:                                                           ││
+│  │ 1. Gather relevant code snippets from referenced modules                    ││
+│  │ 2. Extract symbols mentioned in keySymbols                                  ││
+│  │ 3. Include previous chapter content for context continuity                  ││
+│  │                                                                              ││
+│  │ Claude writes ~150 words/minute of audio, including:                        ││
+│  │ ├─ Natural pauses (...)                                                     ││
+│  │ ├─ Transitions between topics                                               ││
+│  │ ├─ Code references (file paths, function names)                             ││
+│  │ └─ Style-appropriate tone (documentary/tutorial/podcast/etc.)               ││
+│  └─────────────────────────────────────────────────────────────────────────────┘│
+│                                      │                                          │
+│                                      ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐│
+│  │ OUTPUT: Full Narrative Script                                               ││
+│  │                                                                              ││
+│  │ {                                                                           ││
+│  │   script: "Chapter 1: Introduction\n\n...\n\n---\n\nChapter 2: ...",        ││
+│  │   chapters: [                                                               ││
+│  │     { title: "Introduction", content: "..." },                              ││
+│  │     { title: "Core Architecture", content: "..." },                         ││
+│  │     ...                                                                      ││
+│  │   ]                                                                          ││
+│  │ }                                                                            ││
+│  └─────────────────────────────────────────────────────────────────────────────┘│
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -177,14 +419,14 @@ Code Story is an open-source, developer-first platform that analyzes GitHub repo
 │  ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐       │
 │  │    profiles     │       │code_repositories│       │  story_intents  │       │
 │  ├─────────────────┤       ├─────────────────┤       ├─────────────────┤       │
-│  │ id (PK, FK)     │       │ id (PK)         │       │ id (PK)         │       │
-│  │ email           │       │ user_id (FK)    │──┐    │ user_id (FK)    │       │
-│  │ full_name       │       │ repo_url        │  │    │ repository_id   │───┐   │
-│  │ avatar_url      │       │ repo_owner      │  │    │ intent_category │   │   │
-│  │ subscription    │       │ repo_name       │  │    │ user_description│   │   │
-│  │ preferences     │       │ primary_language│  │    │ focus_areas     │   │   │
-│  └────────┬────────┘       │ analysis_cache  │  │    │ conversation    │   │   │
-│           │                └─────────────────┘  │    └─────────────────┘   │   │
+│  │ id (PK, FK)     │       │ id (PK)         │──┐    │ id (PK)         │       │
+│  │ email           │       │ user_id (FK)    │  │    │ repository_id   │───┐   │
+│  │ full_name       │       │ repo_url        │  │    │ intent_category │   │   │
+│  │ avatar_url      │       │ repo_owner      │  │    │ user_description│   │   │
+│  │ subscription    │       │ repo_name       │  │    │ focus_areas     │   │   │
+│  │ preferences     │       │ primary_language│  │    │ conversation    │   │   │
+│  └────────┬────────┘       │ analysis_cache  │  │    └─────────────────┘   │   │
+│           │                └─────────────────┘  │              │           │   │
 │           │                         │           │              │           │   │
 │           │                         │           │              │           │   │
 │           ▼                         ▼           │              ▼           │   │

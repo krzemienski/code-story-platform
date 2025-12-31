@@ -52,22 +52,27 @@ export async function fetchFileContent(owner: string, repo: string, path: string
     },
   })
 
-  // Return null for 404 instead of throwing
   if (response.status === 404) {
     return null
   }
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch file: ${response.status}`)
+    console.log(`[v0] GitHub API error for ${path}: ${response.status}`)
+    return null
   }
 
-  const data = await response.json()
+  try {
+    const data = await response.json()
 
-  if (data.encoding === "base64") {
-    return Buffer.from(data.content, "base64").toString("utf-8")
+    if (data.encoding === "base64") {
+      return Buffer.from(data.content, "base64").toString("utf-8")
+    }
+
+    return data.content
+  } catch (e) {
+    console.log(`[v0] Failed to parse GitHub response for ${path}:`, e)
+    return null
   }
-
-  return data.content
 }
 
 async function fetchRepoMetadata(owner: string, repo: string) {

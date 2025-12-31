@@ -36,11 +36,29 @@ export function StoryProcessing({
     if (!isDemo && initialStatus === "pending" && !hasTriggeredGeneration) {
       setHasTriggeredGeneration(true)
       // Trigger generation
+      console.log("[v0] Triggering story generation for:", storyId)
       fetch("/api/stories/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ storyId }),
-      }).catch((err) => console.error("[v0] Failed to trigger generation:", err))
+      })
+        .then((res) => {
+          console.log("[v0] Generation API response status:", res.status)
+          if (!res.ok) {
+            return res.text().then((text) => {
+              console.error("[v0] Generation API error response:", text)
+              throw new Error(`Generation failed: ${res.status}`)
+            })
+          }
+          return res.json()
+        })
+        .then((data) => {
+          console.log("[v0] Generation API success:", data)
+        })
+        .catch((err) => {
+          console.error("[v0] Failed to trigger generation:", err)
+          setMessage(`Error: ${err.message}`)
+        })
     }
   }, [storyId, initialStatus, isDemo, hasTriggeredGeneration])
 

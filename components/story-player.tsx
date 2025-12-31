@@ -295,14 +295,26 @@ export function StoryPlayer({
   const handleDownload = async () => {
     if (effectiveAudioChunks.length === 0) return
 
-    // Download first chunk or single file
-    const url = effectiveAudioChunks[0]
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `${title.replace(/[^a-z0-9]/gi, "_")}.mp3`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    try {
+      const url = effectiveAudioChunks[0]
+      const response = await fetch(url)
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+
+      const link = document.createElement("a")
+      link.href = blobUrl
+      link.download = `${title.replace(/[^a-z0-9]/gi, "_")}.mp3`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Clean up blob URL
+      URL.revokeObjectURL(blobUrl)
+    } catch (error) {
+      console.error("[v0] Download failed:", error)
+      // Fallback to direct link
+      window.open(effectiveAudioChunks[0], "_blank")
+    }
   }
 
   const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 2]
