@@ -1,38 +1,32 @@
 "use client"
 
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
-import { Github, Menu, X } from "lucide-react"
+import { UserMenu } from "@/components/user-menu"
+import { Github, Menu, X, Compass } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 
-interface NavbarProps {
-  user?: { email: string } | null
-}
-
-export function Navbar({ user }: NavbarProps) {
+export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-zinc-800/50 bg-zinc-950/80 backdrop-blur-xl">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center">
             <Logo />
           </Link>
           <div className="hidden items-center gap-6 md:flex">
-            <Link href="/#features" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Features
+            <Link
+              href="/discover"
+              className="flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-white"
+            >
+              <Compass className="h-4 w-4" />
+              Discover
             </Link>
-            <Link href="/docs" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            <Link href="/docs" className="text-sm text-zinc-400 transition-colors hover:text-white">
               Docs
-            </Link>
-            <Link href="/api" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              API
-            </Link>
-            <Link href="/pricing" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Pricing
             </Link>
           </div>
         </div>
@@ -42,30 +36,17 @@ export function Navbar({ user }: NavbarProps) {
             href="https://github.com/codestory/codestory"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            className="flex items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-white"
           >
             <Github className="h-4 w-4" />
-            <span>Star on GitHub</span>
+            <span>GitHub</span>
           </a>
-          {user ? (
-            <Button asChild>
-              <Link href="/dashboard">Dashboard</Link>
-            </Button>
-          ) : (
-            <>
-              <Button variant="ghost" asChild>
-                <Link href="/auth/login">Sign In</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/auth/sign-up">Try Free</Link>
-              </Button>
-            </>
-          )}
+          <UserMenu />
         </div>
 
         {/* Mobile menu button */}
         <button
-          className="flex h-10 w-10 items-center justify-center rounded-lg md:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-lg md:hidden text-zinc-400"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Toggle menu"
         >
@@ -76,38 +57,33 @@ export function Navbar({ user }: NavbarProps) {
       {/* Mobile menu */}
       <div
         className={cn(
-          "overflow-hidden border-b border-border/40 bg-background transition-all duration-300 md:hidden",
-          mobileMenuOpen ? "max-h-80" : "max-h-0 border-b-0",
+          "overflow-hidden border-b border-zinc-800/50 bg-zinc-950 transition-all duration-300 md:hidden",
+          mobileMenuOpen ? "max-h-60" : "max-h-0 border-b-0",
         )}
       >
         <div className="flex flex-col gap-4 px-4 py-4">
-          <Link href="/#features" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>
-            Features
+          <Link
+            href="/discover"
+            className="flex items-center gap-2 text-sm text-zinc-400"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <Compass className="h-4 w-4" />
+            Discover
           </Link>
-          <Link href="/docs" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>
+          <Link href="/docs" className="text-sm text-zinc-400" onClick={() => setMobileMenuOpen(false)}>
             Docs
           </Link>
-          <Link href="/api" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>
-            API
-          </Link>
-          <Link href="/pricing" className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>
-            Pricing
-          </Link>
-          <div className="flex flex-col gap-2 pt-4">
-            {user ? (
-              <Button asChild className="w-full">
-                <Link href="/dashboard">Dashboard</Link>
-              </Button>
-            ) : (
-              <>
-                <Button variant="outline" asChild className="w-full bg-transparent">
-                  <Link href="/auth/login">Sign In</Link>
-                </Button>
-                <Button asChild className="w-full">
-                  <Link href="/auth/sign-up">Try Free</Link>
-                </Button>
-              </>
-            )}
+          <a
+            href="https://github.com/codestory/codestory"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-zinc-400"
+          >
+            <Github className="h-4 w-4" />
+            GitHub
+          </a>
+          <div className="pt-4 border-t border-zinc-800">
+            <UserMenu />
           </div>
         </div>
       </div>

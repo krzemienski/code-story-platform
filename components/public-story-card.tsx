@@ -11,12 +11,12 @@ interface PublicStoryCardProps {
     narrative_style: string
     actual_duration_seconds?: number
     play_count?: number
-    code_repositories: {
+    code_repositories?: {
       repo_name: string
       repo_owner: string
-      primary_language: string
-      stars_count: number
-    }
+      primary_language?: string
+      stars_count?: number
+    } | null
   }
 }
 
@@ -32,6 +32,8 @@ export function PublicStoryCard({ story }: PublicStoryCardProps) {
   const repo = story.code_repositories
   const duration = story.actual_duration_seconds ? `${Math.floor(story.actual_duration_seconds / 60)} min` : "~10 min"
 
+  const displayName = repo ? `${repo.repo_owner}/${repo.repo_name}` : story.title
+
   return (
     <Link
       href={`/story/${story.id}`}
@@ -39,10 +41,8 @@ export function PublicStoryCard({ story }: PublicStoryCardProps) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold truncate group-hover:text-primary transition-colors">
-            {repo.repo_owner}/{repo.repo_name}
-          </h3>
-          <p className="text-sm text-muted-foreground truncate mt-1">{story.title}</p>
+          <h3 className="font-semibold truncate group-hover:text-primary transition-colors">{displayName}</h3>
+          {repo && <p className="text-sm text-muted-foreground truncate mt-1">{story.title}</p>}
         </div>
         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
           <Play className="h-4 w-4 ml-0.5" />
