@@ -160,20 +160,20 @@ export async function POST(req: Request) {
       .from("stories")
       .update({
         progress: 20,
-        progress_message: "Analyzing package dependencies...",
+        progress_message: "Analyzing project configuration...",
       })
       .eq("id", storyId)
 
-    await log.analyzer(storyId, "Analyzing package.json", {
-      hasDependencies: !!analysis.packageJson?.dependencies,
-      dependencyCount: Object.keys(analysis.packageJson?.dependencies || {}).length,
-    })
+    const projectType = analysis.packageJson ? (analysis.packageJson.type as string) || "node" : "unknown"
 
-    if (analysis.readme) {
-      await log.analyzer(storyId, "Reading README.md", {
-        length: analysis.readme.length,
-      })
-    }
+    await log.analyzer(storyId, "Analyzing project configuration", {
+      projectType,
+      hasConfig: !!analysis.packageJson,
+      dependencyCount:
+        projectType === "node"
+          ? Object.keys((analysis.packageJson as { dependencies?: Record<string, string> })?.dependencies || {}).length
+          : 0,
+    })
 
     const repoSummary = summarizeRepoStructure(analysis)
     console.log("[v0] Repo analysis complete, summary length:", repoSummary.length)
@@ -389,7 +389,7 @@ Output ONLY valid JSON, no other text:`,
 
       try {
         const audioBuffers: ArrayBuffer[] = []
-        const requestIds: string[] = []
+        const chapterAudioUrls: string[] = []
 
         for (let i = 0; i < scriptChunks.length; i++) {
           const chunk = scriptChunks[i]
@@ -405,7 +405,7 @@ Output ONLY valid JSON, no other text:`,
           await supabase
             .from("stories")
             .update({
-              progress: 78 + Math.round((i / scriptChunks.length) * 12),
+              progress: 78 + Math.round((i / scriptChunks.length) * 15),
               progress_message: `Generating audio (${chunkNum}/${scriptChunks.length} chunks)...`,
             })
             .eq("id", storyId)
@@ -449,7 +449,7 @@ Output ONLY valid JSON, no other text:`,
           // Get request ID for continuity tracking
           const requestId = audioResponse.headers.get("request-id")
           if (requestId) {
-            requestIds.push(requestId)
+            // requestIds.push(requestId)
           }
 
           const buffer = await audioResponse.arrayBuffer()
@@ -462,20 +462,51 @@ Output ONLY valid JSON, no other text:`,
             `Chunk ${chunkNum} complete`,
             {
               sizeBytes: buffer.byteLength,
-              requestId,
+              // requestId,
             },
             "success",
           )
+
+          const chunkFileName = `${storyId}_chunk_${chunkNum}.mp3`
+          const chunkData = new Uint8Array(buffer)
+
+          console.log(`[v0] Uploading chunk ${chunkNum}, size: ${chunkData.byteLength} bytes`)
+
+          const { error: chunkUploadError } = await supabase.storage
+            .from("story-audio")
+            .upload(chunkFileName, chunkData, {
+              contentType: "audio/mpeg",
+              upsert: true,
+            })
+
+          if (chunkUploadError) {
+            console.error(`[v0] Chunk ${chunkNum} upload error:`, chunkUploadError)
+            await log.synthesizer(
+              storyId,
+              `Chunk ${chunkNum} upload failed`,
+              { error: chunkUploadError.message },
+              "error",
+            )
+            throw new Error(`Failed to upload chunk ${chunkNum}: ${chunkUploadError.message}`)
+          }
+
+          const {
+            data: { publicUrl: chunkUrl },
+          } = supabase.storage.from("story-audio").getPublicUrl(chunkFileName)
+
+          chapterAudioUrls.push(chunkUrl)
+
+          console.log(`[v0] Chunk ${chunkNum} uploaded: ${chunkUrl}`)
         }
 
         const totalBytes = audioBuffers.reduce((sum, b) => sum + b.byteLength, 0)
-        console.log("[v0] All chunks synthesized, total bytes:", totalBytes)
+        console.log("[v0] All chunks synthesized and uploaded, total bytes:", totalBytes)
 
         await log.synthesizer(
           storyId,
-          "All chunks synthesized",
+          "All audio chunks uploaded",
           {
-            totalChunks: audioBuffers.length,
+            totalChunks: chapterAudioUrls.length,
             totalBytes,
           },
           "success",
@@ -484,77 +515,32 @@ Output ONLY valid JSON, no other text:`,
         await supabase
           .from("stories")
           .update({
-            progress: 92,
-            progress_message: "Combining audio chunks...",
-          })
-          .eq("id", storyId)
-
-        const combinedBuffer = new Uint8Array(totalBytes)
-        let offset = 0
-        for (const buffer of audioBuffers) {
-          combinedBuffer.set(new Uint8Array(buffer), offset)
-          offset += buffer.byteLength
-        }
-
-        console.log("[v0] Audio combined, uploading to storage...")
-
-        await log.synthesizer(
-          storyId,
-          "Audio combined",
-          {
-            totalSizeBytes: combinedBuffer.byteLength,
-          },
-          "success",
-        )
-
-        await supabase
-          .from("stories")
-          .update({
             progress: 95,
-            progress_message: "Uploading audio file...",
+            progress_message: "Finalizing story...",
           })
           .eq("id", storyId)
 
-        await log.synthesizer(storyId, "Uploading to storage", {})
-
-        const fileName = `${storyId}.mp3`
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("story-audio")
-          .upload(fileName, combinedBuffer.buffer, {
-            contentType: "audio/mpeg",
-            upsert: true,
-          })
-
-        if (uploadError) {
-          console.error("[v0] Upload error:", uploadError)
-          await log.synthesizer(
-            storyId,
-            "Upload failed",
-            {
-              error: uploadError.message,
-            },
-            "error",
-          )
-          throw new Error(`Storage upload failed: ${uploadError.message}`)
-        }
-
-        console.log("[v0] Upload successful:", uploadData)
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("story-audio").getPublicUrl(fileName)
-
-        console.log("[v0] Public URL:", publicUrl)
+        const mainAudioUrl = chapterAudioUrls[0]
 
         // Estimate duration: ~2.5 words per second at normal speaking pace
         const estimatedDuration = Math.round(actualWords / 2.5)
 
+        const updatedChapters = chapters.map(
+          (
+            ch: { number: number; title: string; start_time_seconds: number; duration_seconds: number },
+            idx: number,
+          ) => ({
+            ...ch,
+            audio_url: chapterAudioUrls[idx] || chapterAudioUrls[chapterAudioUrls.length - 1],
+          }),
+        )
+
         await log.synthesizer(
           storyId,
-          "Audio upload complete",
+          "Audio processing complete",
           {
-            url: publicUrl,
-            sizeBytes: combinedBuffer.byteLength,
+            mainUrl: mainAudioUrl,
+            chunkCount: chapterAudioUrls.length,
             durationSeconds: estimatedDuration,
           },
           "success",
@@ -565,7 +551,7 @@ Output ONLY valid JSON, no other text:`,
           "Story generation complete!",
           {
             totalDuration: estimatedDuration,
-            chapters: chapters.length,
+            chapters: updatedChapters.length,
           },
           "success",
         )
@@ -573,7 +559,9 @@ Output ONLY valid JSON, no other text:`,
         const { error: finalUpdateError } = await supabase
           .from("stories")
           .update({
-            audio_url: publicUrl,
+            audio_url: mainAudioUrl,
+            audio_chunks: chapterAudioUrls,
+            chapters: updatedChapters,
             actual_duration_seconds: estimatedDuration,
             status: "completed",
             progress: 100,
@@ -590,7 +578,8 @@ Output ONLY valid JSON, no other text:`,
 
         return Response.json({
           success: true,
-          audioUrl: publicUrl,
+          audioUrl: mainAudioUrl,
+          audioChunks: chapterAudioUrls,
           duration: estimatedDuration,
         })
       } catch (audioError) {

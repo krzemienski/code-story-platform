@@ -15,6 +15,7 @@ import {
   ChevronUp,
   FileText,
   X,
+  Download,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Waveform } from "@/components/ui/waveform"
@@ -27,11 +28,12 @@ interface StoryPlayerProps {
   title: string
   subtitle?: string
   audioUrl?: string
+  audioChunks?: string[] // Added array of audio chunk URLs
   chapters?: StoryChapter[]
   initialPosition?: number
   scriptText?: string
   className?: string
-  isDemo?: boolean // Added isDemo prop
+  isDemo?: boolean
 }
 
 export function StoryPlayer({
@@ -39,11 +41,12 @@ export function StoryPlayer({
   title,
   subtitle,
   audioUrl,
+  audioChunks = [], // Default to empty array
   chapters = [],
   initialPosition = 0,
   scriptText,
   className,
-  isDemo, // Added isDemo prop
+  isDemo,
 }: StoryPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(initialPosition)
@@ -53,8 +56,49 @@ export function StoryPlayer({
   const [playbackRate, setPlaybackRate] = useState(1)
   const [showChapters, setShowChapters] = useState(false)
   const [showScript, setShowScript] = useState(false)
+
+  const [currentChunkIndex, setCurrentChunkIndex] = useState(0)
+  const [chunkDurations, setChunkDurations] = useState<number[]>([])
+  const [totalDuration, setTotalDuration] = useState(0)
+  const [isLoadingChunk, setIsLoadingChunk] = useState(false)
+
   const audioRef = useRef<HTMLAudioElement>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
+
+  const effectiveAudioChunks = audioChunks.length > 0 ? audioChunks : audioUrl ? [audioUrl] : []
+  const hasMultipleChunks = effectiveAudioChunks.length > 1
+
+  const getChunkStartTime = useCallback(
+    (chunkIndex: number) => {
+      return chunkDurations.slice(0, chunkIndex).reduce((sum, d) => sum + d, 0)
+    },
+    [chunkDurations],
+  )
+
+  const getGlobalTime = useCallback(
+    (chunkIndex: number, chunkTime: number) => {
+      return getChunkStartTime(chunkIndex) + chunkTime
+    },
+    [getChunkStartTime],
+  )
+
+  const findChunkForTime = useCallback(
+    (globalTime: number): { chunkIndex: number; localTime: number } => {
+      let accumulated = 0
+      for (let i = 0; i < chunkDurations.length; i++) {
+        if (globalTime < accumulated + chunkDurations[i]) {
+          return { chunkIndex: i, localTime: globalTime - accumulated }
+        }
+        accumulated += chunkDurations[i]
+      }
+      // If beyond all chunks, return last chunk at end
+      return {
+        chunkIndex: Math.max(0, chunkDurations.length - 1),
+        localTime: chunkDurations[chunkDurations.length - 1] || 0,
+      }
+    },
+    [chunkDurations],
+  )
 
   const currentChapter = chapters.find((ch, i) => {
     const nextChapter = chapters[i + 1]
@@ -65,7 +109,7 @@ export function StoryPlayer({
   // Save playback position to database (skip in demo mode)
   const savePosition = useCallback(
     async (position: number) => {
-      if (isDemo) return // Skip saving in demo mode
+      if (isDemo) return
       const supabase = createClient()
       await supabase
         .from("stories")
@@ -81,7 +125,7 @@ export function StoryPlayer({
   // Debounced save
   const debouncedSavePosition = useCallback(
     (position: number) => {
-      if (isDemo) return // Skip in demo mode
+      if (isDemo) return
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }
@@ -104,9 +148,41 @@ export function StoryPlayer({
     }
   }, [playbackRate])
 
+  useEffect(() => {
+    if (effectiveAudioChunks.length === 0) return
+
+    const loadDurations = async () => {
+      const durations: number[] = []
+
+      for (const url of effectiveAudioChunks) {
+        try {
+          const audio = new Audio()
+          await new Promise<void>((resolve, reject) => {
+            audio.onloadedmetadata = () => {
+              durations.push(audio.duration)
+              resolve()
+            }
+            audio.onerror = () => {
+              durations.push(180) // Fallback 3 min per chunk
+              resolve()
+            }
+            audio.src = url
+          })
+        } catch {
+          durations.push(180) // Fallback
+        }
+      }
+
+      setChunkDurations(durations)
+      setTotalDuration(durations.reduce((sum, d) => sum + d, 0))
+    }
+
+    loadDurations()
+  }, [effectiveAudioChunks])
+
   // Increment play count on first play (skip in demo mode)
   useEffect(() => {
-    if (isDemo) return // Skip in demo mode
+    if (isDemo) return
     if (isPlaying && currentTime < 5) {
       const supabase = createClient()
       supabase.rpc("increment_play_count", { story_id: storyId }).then(({ error }) => {
@@ -132,7 +208,7 @@ export function StoryPlayer({
         audioRef.current.play()
       }
       setIsPlaying(!isPlaying)
-    } else if (!audioUrl) {
+    } else if (effectiveAudioChunks.length === 0) {
       // Demo mode or no audio - just toggle state
       setIsPlaying(!isPlaying)
     }
@@ -140,58 +216,98 @@ export function StoryPlayer({
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime)
-      debouncedSavePosition(audioRef.current.currentTime)
+      const globalTime = getGlobalTime(currentChunkIndex, audioRef.current.currentTime)
+      setCurrentTime(globalTime)
+      debouncedSavePosition(globalTime)
     }
   }
 
   const handleLoadedMetadata = () => {
-    if (audioRef.current) {
+    if (audioRef.current && !hasMultipleChunks) {
       setDuration(audioRef.current.duration)
+      setTotalDuration(audioRef.current.duration)
       if (initialPosition > 0) {
         audioRef.current.currentTime = initialPosition
       }
     }
   }
 
-  const handleSeek = (value: number[]) => {
-    const newTime = value[0]
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime
-      setCurrentTime(newTime)
+  const handleChunkEnded = async () => {
+    if (currentChunkIndex < effectiveAudioChunks.length - 1) {
+      // More chunks to play
+      setIsLoadingChunk(true)
+      setCurrentChunkIndex(currentChunkIndex + 1)
+
+      // Wait for audio element to update src and then play
+      setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.play()
+        }
+        setIsLoadingChunk(false)
+      }, 100)
     } else {
-      setCurrentTime(newTime)
+      // All chunks finished
+      setIsPlaying(false)
+      savePosition(totalDuration)
     }
+  }
+
+  const handleSeek = (value: number[]) => {
+    const newGlobalTime = value[0]
+
+    if (hasMultipleChunks && chunkDurations.length > 0) {
+      const { chunkIndex, localTime } = findChunkForTime(newGlobalTime)
+
+      if (chunkIndex !== currentChunkIndex) {
+        // Need to switch chunks
+        setCurrentChunkIndex(chunkIndex)
+        setTimeout(() => {
+          if (audioRef.current) {
+            audioRef.current.currentTime = localTime
+            if (isPlaying) audioRef.current.play()
+          }
+        }, 100)
+      } else if (audioRef.current) {
+        audioRef.current.currentTime = localTime
+      }
+    } else if (audioRef.current) {
+      audioRef.current.currentTime = newGlobalTime
+    }
+
+    setCurrentTime(newGlobalTime)
   }
 
   const handleSkip = (seconds: number) => {
-    const displayDuration = duration || 1845
-    if (audioRef.current) {
-      const newTime = Math.max(0, Math.min(displayDuration, currentTime + seconds))
-      audioRef.current.currentTime = newTime
-      setCurrentTime(newTime)
-    } else {
-      const newTime = Math.max(0, Math.min(displayDuration, currentTime + seconds))
-      setCurrentTime(newTime)
-    }
+    const displayDuration = totalDuration || duration || 1845
+    const newTime = Math.max(0, Math.min(displayDuration, currentTime + seconds))
+    handleSeek([newTime])
   }
 
   const jumpToChapter = (chapter: StoryChapter) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = chapter.start_time_seconds
-      setCurrentTime(chapter.start_time_seconds)
-      if (!isPlaying) {
-        audioRef.current.play()
-        setIsPlaying(true)
-      }
-    } else {
-      setCurrentTime(chapter.start_time_seconds)
+    handleSeek([chapter.start_time_seconds])
+    if (!isPlaying && audioRef.current) {
+      audioRef.current.play()
+      setIsPlaying(true)
     }
     setShowChapters(false)
   }
 
+  const handleDownload = async () => {
+    if (effectiveAudioChunks.length === 0) return
+
+    // Download first chunk or single file
+    const url = effectiveAudioChunks[0]
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `${title.replace(/[^a-z0-9]/gi, "_")}.mp3`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 2]
   const displayDuration =
+    totalDuration ||
     duration ||
     chapters.reduce(
       (acc, ch) =>
@@ -200,18 +316,17 @@ export function StoryPlayer({
     ) ||
     892
 
+  const currentAudioSrc = effectiveAudioChunks[currentChunkIndex] || audioUrl
+
   return (
     <div className={cn("rounded-xl border border-border bg-card", className)}>
-      {audioUrl && (
+      {currentAudioSrc && (
         <audio
           ref={audioRef}
-          src={audioUrl}
+          src={currentAudioSrc}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
-          onEnded={() => {
-            setIsPlaying(false)
-            savePosition(duration)
-          }}
+          onEnded={handleChunkEnded}
         />
       )}
 
@@ -225,7 +340,7 @@ export function StoryPlayer({
             <div className="relative z-10 h-20 w-20">
               <Orb
                 colors={["#4ade80", "#22c55e"]}
-                agentState={isPlaying ? "talking" : null}
+                agentState={isPlaying ? "talking" : isLoadingChunk ? "thinking" : null}
                 className="h-full w-full"
               />
             </div>
@@ -241,6 +356,11 @@ export function StoryPlayer({
             </p>
           )}
           {subtitle && !currentChapter && <p className="text-sm text-muted-foreground capitalize">{subtitle}</p>}
+          {hasMultipleChunks && (
+            <p className="text-xs text-muted-foreground/60 mt-1">
+              Part {currentChunkIndex + 1} of {effectiveAudioChunks.length}
+            </p>
+          )}
         </div>
 
         {/* Progress bar */}
@@ -257,7 +377,7 @@ export function StoryPlayer({
           <Button variant="ghost" size="icon" onClick={() => handleSkip(-15)} className="h-10 w-10">
             <SkipBack className="h-5 w-5" />
           </Button>
-          <Button size="icon" className="h-16 w-16 rounded-full" onClick={handlePlayPause}>
+          <Button size="icon" className="h-16 w-16 rounded-full" onClick={handlePlayPause} disabled={isLoadingChunk}>
             {isPlaying ? <Pause className="h-7 w-7" /> : <Play className="h-7 w-7 ml-1" />}
           </Button>
           <Button variant="ghost" size="icon" onClick={() => handleSkip(15)} className="h-10 w-10">
@@ -297,6 +417,11 @@ export function StoryPlayer({
           </Button>
 
           <div className="flex gap-1">
+            {effectiveAudioChunks.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={handleDownload} className="gap-1">
+                <Download className="h-4 w-4" />
+              </Button>
+            )}
             {scriptText && (
               <Button variant="ghost" size="sm" onClick={() => setShowScript(!showScript)} className="gap-1">
                 <FileText className="h-4 w-4" />
@@ -322,7 +447,7 @@ export function StoryPlayer({
             <div className="space-y-1">
               {chapters.map((chapter) => (
                 <button
-                  key={chapter.id}
+                  key={chapter.id || chapter.chapter_number}
                   onClick={() => jumpToChapter(chapter)}
                   className={cn(
                     "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-secondary",

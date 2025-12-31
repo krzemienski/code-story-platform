@@ -78,7 +78,10 @@ export default async function StoryPage({
     chapters = chaptersData || []
   }
 
-  const typedStory = story as Story & { repository?: { repo_name: string; repo_owner: string; repo_url: string } }
+  const typedStory = story as Story & {
+    repository?: { repo_name: string; repo_owner: string; repo_url: string }
+    audio_chunks?: string[]
+  }
   const typedChapters = chapters as StoryChapter[]
 
   const displayChapters: StoryChapter[] =
@@ -237,6 +240,7 @@ export default async function StoryPage({
               title={typedStory.title}
               subtitle={`${typedStory.narrative_style} • ${typedStory.expertise_level}`}
               audioUrl={typedStory.audio_url || undefined}
+              audioChunks={typedStory.audio_chunks || []}
               chapters={displayChapters}
               initialPosition={typedStory.last_played_position}
               scriptText={typedStory.transcript || typedStory.script_text || undefined}
