@@ -2,12 +2,13 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
-import { Plus, Download, MoreHorizontal, Clock, Headphones, TrendingUp, Compass } from "lucide-react"
+import { Plus, Download, MoreHorizontal, Clock, Headphones, TrendingUp, Compass, BookOpen } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Progress } from "@/components/ui/progress"
 import { ChronicleCard } from "@/components/chronicle-card"
 import { ParallaxBackground } from "@/components/parallax-background"
-import { AudioPlayer } from "@/components/audio-player" // Import client component for audio context
+import { AudioPlayer } from "@/components/audio-player"
+import { TaliMascot } from "@/components/tali-mascot"
 
 function formatDuration(seconds: number | null): string {
   if (!seconds) return "0:00"
@@ -43,12 +44,10 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Redirect to home if not authenticated
   if (!user) {
     redirect("/")
   }
 
-  // Fetch user's stories
   const { data: userStories } = await supabase
     .from("stories")
     .select(`
@@ -58,7 +57,6 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
 
-  // Fetch trending public stories for discovery
   const { data: trendingStories } = await supabase
     .from("stories")
     .select(`
@@ -87,23 +85,28 @@ export default async function DashboardPage() {
       s.last_played_position < (s.actual_duration_seconds || 0),
   )
 
+  const userName = user.user_metadata?.name || user.email?.split("@")[0] || "there"
+
   return (
     <div className="min-h-screen bg-background relative">
       <ParallaxBackground />
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Your Stories</h1>
-            <p className="text-muted-foreground">
-              Welcome back, {user.user_metadata?.name || user.email?.split("@")[0]}
-            </p>
+        <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-4">
+            <TaliMascot size="sm" mood="happy" />
+            <div>
+              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <BookOpen className="h-6 w-6 text-primary" />
+                Your Tales
+              </h1>
+              <p className="text-muted-foreground">Welcome back, {userName}! Ready to explore more code stories?</p>
+            </div>
           </div>
           <Button asChild className="bg-primary hover:bg-primary/90">
             <Link href="/#generate">
               <Plus className="mr-2 h-4 w-4" />
-              New Story
+              Create New Tale
             </Link>
           </Button>
         </div>
@@ -141,18 +144,18 @@ export default async function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <AudioPlayer audioUrl={continueListening.audio_url} /> {/* Add client component for play buttons */}
+                <AudioPlayer audioUrl={continueListening.audio_url} />
               </div>
             </div>
           </div>
         )}
 
-        {/* User's Stories */}
+        {/* User's Tales */}
         <div className="mb-12">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-muted-foreground">Your Stories</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground">Your Tales Library</h2>
             {userStories && userStories.length > 0 && (
-              <span className="text-xs text-muted-foreground">{userStories.length} stories</span>
+              <span className="text-xs text-muted-foreground">{userStories.length} tales</span>
             )}
           </div>
 
@@ -185,7 +188,6 @@ export default async function DashboardPage() {
                         <span>{formatDate(story.created_at)}</span>
                       </div>
 
-                      {/* Progress for in-progress stories */}
                       {story.status !== "completed" && story.status !== "failed" && (
                         <div className="mt-3">
                           <Progress value={story.progress} className="h-1" />
@@ -196,11 +198,10 @@ export default async function DashboardPage() {
                       )}
                     </div>
 
-                    {/* Actions */}
                     <div className="flex items-center gap-2">
                       {story.status === "completed" && (
                         <>
-                          <AudioPlayer audioUrl={story.audio_url} /> {/* Add client component for play buttons */}
+                          <AudioPlayer audioUrl={story.audio_url} />
                           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                             <Download className="h-4 w-4" />
                           </Button>
@@ -227,13 +228,13 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-border bg-card/30 p-12 text-center">
-              <Headphones className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold text-foreground">No stories yet</h3>
-              <p className="mt-2 text-muted-foreground">Transform your first code repository into an audio story.</p>
+              <TaliMascot size="md" mood="thinking" className="mx-auto mb-4" />
+              <h3 className="mt-4 text-lg font-semibold text-foreground">No tales yet</h3>
+              <p className="mt-2 text-muted-foreground">Transform your first code repository into an audio tale.</p>
               <Button asChild className="mt-6 bg-primary hover:bg-primary/90">
                 <Link href="/#generate">
                   <Plus className="mr-2 h-4 w-4" />
-                  Create Your First Story
+                  Create Your First Tale
                 </Link>
               </Button>
             </div>
@@ -245,7 +246,7 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />
-              <h2 className="text-sm font-semibold text-muted-foreground">Discover Community Stories</h2>
+              <h2 className="text-sm font-semibold text-muted-foreground">Discover Community Tales</h2>
             </div>
             <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
               <Link href="/discover">
@@ -264,7 +265,7 @@ export default async function DashboardPage() {
           ) : (
             <div className="rounded-xl border border-dashed border-border bg-card/30 p-8 text-center">
               <Compass className="mx-auto h-10 w-10 text-muted-foreground" />
-              <p className="mt-3 text-muted-foreground">No community stories yet. Be the first to share!</p>
+              <p className="mt-3 text-muted-foreground">No community tales yet. Be the first to share!</p>
             </div>
           )}
         </div>

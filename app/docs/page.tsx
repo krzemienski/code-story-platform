@@ -16,7 +16,7 @@ export default function DocsPage() {
           <Badge variant="secondary" className="mb-4">
             Documentation
           </Badge>
-          <h1 className="text-4xl font-bold tracking-tight text-foreground mb-4">How CodeTale Works</h1>
+          <h1 className="text-4xl font-bold tracking-tight text-foreground mb-4">How Code Tales Works</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Transform any GitHub repository into an engaging audio narrative. Perfect for learning codebases,
             onboarding, or just enjoying code as a story.
@@ -205,11 +205,11 @@ export default function DocsPage() {
               <Terminal className="h-5 w-5" />
               Self-Hosting
             </CardTitle>
-            <CardDescription>Run CodeTale on your own infrastructure</CardDescription>
+            <CardDescription>Run Code Tales on your own infrastructure</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              CodeTale is open source. You can self-host it with your own API keys for Claude (Anthropic) and
+              Code Tales is open source. You can self-host it with your own API keys for Claude (Anthropic) and
               ElevenLabs.
             </p>
             <div className="rounded-lg bg-zinc-900 p-4 font-mono text-sm text-zinc-300">

@@ -84,7 +84,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md bg-zinc-900 border-zinc-800">
         <DialogHeader>
-          <DialogTitle className="text-xl text-white">Welcome to CodeTale</DialogTitle>
+          <DialogTitle className="text-xl text-white">Welcome to Code Tales</DialogTitle>
           <DialogDescription className="text-zinc-400">
             Sign in to save your stories and access your personal dashboard.
           </DialogDescription>

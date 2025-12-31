@@ -1,11 +1,13 @@
 import { createClient } from "@/lib/supabase/server"
-import { Code, Users, Plus } from "lucide-react"
+import { Code, Users, Plus, BookOpen, Headphones, Mic, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/navbar"
 import { FeaturedHero } from "@/components/featured-hero"
 import { ChronicleCard } from "@/components/chronicle-card"
 import { ParallaxBackground } from "@/components/parallax-background"
+import { TaliMascot } from "@/components/tali-mascot"
+import { Logo } from "@/components/logo"
 
 async function getPublicStories() {
   const supabase = await createClient()
@@ -81,20 +83,104 @@ export default async function HomePage() {
       <Navbar />
 
       <main>
-        {/* Hero Section */}
+        {/* Hero Section with Mascot and Create Your Own */}
         <section className="px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="flex justify-center mb-6">
+                <TaliMascot size="lg" speaking mood="excited" />
+              </div>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif mb-4">
+                Your Code Has a <span className="text-primary italic">Story</span>
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+                Transform any GitHub repository into an immersive audio experience. Listen like a podcast, read like a
+                book, or explore with AI-narrated tales.
+              </p>
+
+              {/* How It Works Pills */}
+              <div className="flex flex-wrap justify-center gap-3 mb-8">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/50 border border-border">
+                  <Code className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Paste a GitHub URL</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/50 border border-border">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm">AI analyzes the code</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/50 border border-border">
+                  <Headphones className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Listen to your tale</span>
+                </div>
+              </div>
+            </div>
+
             <FeaturedHero stories={featuredStories} />
           </div>
         </section>
 
-        {/* Stories Section - Renamed from "Chronicles" to "Code Stories" */}
+        {/* How It Works - Detailed Section */}
+        <section className="px-4 sm:px-6 lg:px-8 py-16 border-t border-border bg-card/20">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-2xl sm:text-3xl font-semibold mb-2">How Code Tales Works</h2>
+              <p className="text-muted-foreground">From repository to audio story in minutes</p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8">
+              {/* Book-like Experience */}
+              <div className="text-center p-6 rounded-2xl bg-card/50 border border-border">
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-2">Book Experience</h3>
+                <p className="text-sm text-muted-foreground">
+                  Get a comprehensive narrative with chapters covering architecture, design patterns, and the evolution
+                  of the codebase.
+                </p>
+              </div>
+
+              {/* Podcast Experience */}
+              <div className="text-center p-6 rounded-2xl bg-card/50 border border-border">
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Mic className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-2">Podcast Style</h3>
+                <p className="text-sm text-muted-foreground">
+                  Quick, digestible episodes perfect for commutes. Learn about repositories while on the go.
+                </p>
+              </div>
+
+              {/* Fictional Narrative */}
+              <div className="text-center p-6 rounded-2xl bg-card/50 border border-border">
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-2">Fictional Tales</h3>
+                <p className="text-sm text-muted-foreground">
+                  Experience code as an adventure story with heroes, challenges, and triumphs - perfect for creative
+                  learning.
+                </p>
+              </div>
+            </div>
+
+            {/* Self-hosting note */}
+            <div className="mt-12 text-center p-6 rounded-xl bg-primary/5 border border-primary/20">
+              <p className="text-sm text-muted-foreground">
+                <span className="text-primary font-medium">Self-hosted & Open Source</span> — Deploy your own instance
+                with full control. Scale to thousands of tales with your infrastructure.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Stories Section - Renamed from "Chronicles" to "Code Tales" */}
         <section className="px-4 sm:px-6 lg:px-8 py-12 border-t border-border">
           <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
               <div>
-                <h2 className="text-2xl sm:text-3xl font-semibold mb-2">Code Stories</h2>
+                <h2 className="text-2xl sm:text-3xl font-semibold mb-2">Community Tales</h2>
                 <p className="text-muted-foreground">Discover the stories woven within open source projects.</p>
               </div>
 
@@ -137,7 +223,7 @@ export default async function HomePage() {
             ) : (
               <div className="text-center py-16 text-muted-foreground">
                 <Code className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No stories yet. Be the first to create one!</p>
+                <p>No tales yet. Be the first to create one!</p>
               </div>
             )}
 
@@ -146,12 +232,12 @@ export default async function HomePage() {
               <div className="h-12 w-12 rounded-full border border-dashed border-border flex items-center justify-center mb-4">
                 <Plus className="h-5 w-5 text-muted-foreground" />
               </div>
-              <h3 className="font-medium mb-1">Submit Your Story</h3>
+              <h3 className="font-medium mb-1">Submit Your Tale</h3>
               <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
-                Open a PR to add your generated story to the collection.
+                Open a PR to add your generated tale to the collection.
               </p>
               <Button variant="outline" className="bg-transparent border-border" asChild>
-                <Link href="/discover">Load More Stories</Link>
+                <Link href="/discover">Load More Tales</Link>
               </Button>
             </div>
           </div>
@@ -168,7 +254,7 @@ export default async function HomePage() {
             <p className="text-3xl sm:text-4xl font-serif italic text-muted-foreground mb-6">for the love of code.</p>
 
             <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-              CodeTale is fully open source. We believe that software architecture is an art form deserving of new
+              Code Tales is fully open source. We believe that software architecture is an art form deserving of new
               mediums of expression. Contribute to the engine, improve the audio generation, or expand the collection.
             </p>
 
@@ -180,7 +266,7 @@ export default async function HomePage() {
                 </a>
               </Button>
               <Button variant="outline" className="gap-2 bg-transparent border-border" asChild>
-                <a href="https://discord.gg/codetale" target="_blank" rel="noopener noreferrer">
+                <a href="https://discord.gg/codetales" target="_blank" rel="noopener noreferrer">
                   <Users className="h-4 w-4" />
                   Join Discord Community
                 </a>
@@ -193,16 +279,9 @@ export default async function HomePage() {
       {/* Footer */}
       <footer className="border-t border-border py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-primary">
-              <path d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V20C20 21.1046 19.1046 22 18 22H6C4.89543 22 4 21.1046 4 20V4Z" />
-            </svg>
-            <span className="font-semibold text-sm">
-              Code<span className="text-primary">Tale</span>
-            </span>
-          </div>
+          <Logo size="sm" animated />
 
-          <p className="text-xs text-muted-foreground">© 2025 CodeTale. Licensed under MIT. The code is open.</p>
+          <p className="text-xs text-muted-foreground">© 2025 Code Tales. Licensed under MIT. The code is open.</p>
 
           <div className="flex items-center gap-6 text-xs text-muted-foreground">
             <Link href="/docs" className="hover:text-foreground transition-colors">

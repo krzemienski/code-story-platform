@@ -23,7 +23,7 @@ export function Footer() {
                 <Github className="h-5 w-5" />
               </a>
               <a
-                href="https://twitter.com/codetale_ai"
+                href="https://twitter.com/codetales_ai"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground transition-colors hover:text-foreground"
@@ -91,7 +91,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="https://discord.gg/codetale"
+                  href="https://discord.gg/codetales"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-muted-foreground hover:text-foreground"
@@ -101,7 +101,7 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="https://twitter.com/codetale_ai"
+                  href="https://twitter.com/codetales_ai"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-muted-foreground hover:text-foreground"
@@ -125,7 +125,7 @@ export function Footer() {
 
         <div className="mt-12 border-t border-border pt-8">
           <p className="text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} CodeTale. MIT License.
+            © {new Date().getFullYear()} Code Tales. MIT License.
           </p>
         </div>
       </div>

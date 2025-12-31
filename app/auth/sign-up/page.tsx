@@ -60,7 +60,7 @@ export default function SignUpPage() {
   }
 
   const handleDemoMode = () => {
-    sessionStorage.setItem("codetale_demo_mode", "true")
+    sessionStorage.setItem("codetales_demo_mode", "true")
     router.push("/dashboard")
   }
 
