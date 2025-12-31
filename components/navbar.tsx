@@ -4,17 +4,19 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Logo } from "@/components/logo"
 import { UserMenu } from "@/components/user-menu"
-import { Menu, X, Sparkles, Headphones } from "lucide-react"
+import { Menu, X, Sparkles, Headphones, Radio } from "lucide-react"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
+import { useAudioPlayerContext } from "@/lib/audio-player-context"
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const pathname = usePathname()
+  const { currentItem, isPlaying, setPlayerExpanded, isPlayerVisible } = useAudioPlayerContext()
 
   useEffect(() => {
     const supabase = createClient()
@@ -73,6 +75,31 @@ export function Navbar() {
 
         {/* Desktop right section */}
         <div className="hidden items-center gap-3 md:flex">
+          {isPlayerVisible && currentItem && (
+            <button
+              onClick={() => setPlayerExpanded(true)}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-colors",
+                isPlaying
+                  ? "bg-primary/20 text-primary border border-primary/30"
+                  : "bg-secondary text-muted-foreground border border-border",
+              )}
+            >
+              {isPlaying && (
+                <span className="flex items-center gap-[2px]">
+                  {[...Array(3)].map((_, i) => (
+                    <span
+                      key={i}
+                      className="w-0.5 bg-primary rounded-full animate-waveform"
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    />
+                  ))}
+                </span>
+              )}
+              {!isPlaying && <Radio className="h-3 w-3" />}
+              <span className="max-w-[120px] truncate">{currentItem.title}</span>
+            </button>
+          )}
           <Link
             href="https://github.com/krzemienski/codestory"
             target="_blank"
@@ -108,6 +135,33 @@ export function Navbar() {
         )}
       >
         <div className="flex flex-col gap-1 px-4 py-4">
+          {isPlayerVisible && currentItem && (
+            <button
+              onClick={() => {
+                setPlayerExpanded(true)
+                setMobileMenuOpen(false)
+              }}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-colors mb-2",
+                isPlaying ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground",
+              )}
+            >
+              {isPlaying ? (
+                <span className="flex items-center gap-[2px]">
+                  {[...Array(3)].map((_, i) => (
+                    <span
+                      key={i}
+                      className="w-0.5 h-3 bg-primary rounded-full animate-waveform"
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    />
+                  ))}
+                </span>
+              ) : (
+                <Radio className="h-4 w-4" />
+              )}
+              <span className="truncate">Now Playing: {currentItem.title}</span>
+            </button>
+          )}
           <Link
             href="/discover"
             className={cn(

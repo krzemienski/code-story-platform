@@ -44,6 +44,8 @@ async function getFeaturedStories() {
       id,
       title,
       actual_duration_seconds,
+      audio_url,
+      audio_chunks,
       code_repositories (
         repo_name,
         repo_owner,
@@ -64,6 +66,8 @@ async function getFeaturedStories() {
     repo_name: story.code_repositories?.repo_name || undefined,
     primary_language: story.code_repositories?.primary_language || undefined,
     actual_duration_seconds: story.actual_duration_seconds || undefined,
+    audio_url: story.audio_url || undefined,
+    audio_chunks: story.audio_chunks || undefined,
   }))
 }
 

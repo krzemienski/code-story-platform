@@ -84,10 +84,16 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
 
   const isCurrentlyPlaying = currentItem?.id === story.id && isPlaying
   const isCurrentItem = currentItem?.id === story.id
+  const hasAudio = story.audio_url || (story.audio_chunks && story.audio_chunks.length > 0)
 
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+
+    if (!hasAudio) {
+      window.location.href = `/story/${story.id}`
+      return
+    }
 
     if (isCurrentItem) {
       toggle()
@@ -108,6 +114,8 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
     e.preventDefault()
     e.stopPropagation()
 
+    if (!hasAudio) return
+
     addToQueue({
       id: story.id,
       title: story.title,
@@ -121,9 +129,13 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
 
   if (variant === "grid") {
     return (
-      <div className="group relative rounded-xl border border-border bg-card/50 overflow-hidden transition-all hover:border-primary/50 card-glow">
+      <div
+        className={cn(
+          "group relative rounded-xl border bg-card/50 overflow-hidden transition-all hover:border-primary/50 card-glow",
+          isCurrentItem ? "border-primary/50 ring-1 ring-primary/20" : "border-border",
+        )}
+      >
         <Link href={`/story/${story.id}`} className="block">
-          {/* Code preview placeholder */}
           <div className="h-32 bg-secondary/30 relative overflow-hidden">
             <div className="absolute inset-0 p-4 font-mono text-[10px] text-muted-foreground/50 leading-relaxed overflow-hidden">
               <pre>{`function analyze(repo) {
@@ -136,7 +148,26 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
 
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+            {isCurrentlyPlaying && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <div className="flex items-center gap-[3px]">
+                  {[...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1 bg-primary rounded-full animate-waveform"
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div
+              className={cn(
+                "absolute inset-0 flex items-center justify-center transition-opacity bg-black/40",
+                isCurrentlyPlaying ? "opacity-0" : "opacity-0 group-hover:opacity-100",
+              )}
+            >
               <Button
                 size="icon"
                 className="h-12 w-12 rounded-full bg-primary hover:bg-primary/90"
@@ -148,7 +179,6 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
           </div>
 
           <div className="p-4">
-            {/* Tags */}
             <div className="flex flex-wrap gap-1.5 mb-3">
               {language && (
                 <span
@@ -162,12 +192,15 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
               </span>
             </div>
 
-            {/* Title */}
-            <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+            <h3
+              className={cn(
+                "font-semibold text-sm mb-2 line-clamp-2 transition-colors",
+                isCurrentItem ? "text-primary" : "group-hover:text-primary",
+              )}
+            >
               {story.title}
             </h3>
 
-            {/* Stats */}
             <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
@@ -181,7 +214,6 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
               )}
             </div>
 
-            {/* Repo info */}
             {repo && (
               <div className="flex items-center gap-1.5 mt-3 text-[11px] text-muted-foreground">
                 <Github className="h-3 w-3" />
@@ -193,23 +225,28 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
           </div>
         </Link>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background text-muted-foreground hover:text-foreground"
-          onClick={handleAddToQueue}
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
+        {hasAudio && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background text-muted-foreground hover:text-foreground"
+            onClick={handleAddToQueue}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     )
   }
 
-  // List variant
   return (
-    <div className="group relative flex gap-4 sm:gap-6 rounded-xl border border-border bg-card/30 p-4 transition-all hover:border-primary/30 hover:bg-card/50 card-glow">
+    <div
+      className={cn(
+        "group relative flex gap-4 sm:gap-6 rounded-xl border bg-card/30 p-4 transition-all hover:bg-card/50 card-glow",
+        isCurrentItem ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30",
+      )}
+    >
       <Link href={`/story/${story.id}`} className="flex gap-4 sm:gap-6 flex-1">
-        {/* Left: Code preview or waveform */}
         <div className="hidden sm:flex w-40 h-24 rounded-lg bg-secondary/30 relative overflow-hidden shrink-0 items-center justify-center">
           <div className="absolute inset-0 p-2 font-mono text-[8px] text-muted-foreground/40 leading-relaxed overflow-hidden">
             <pre>{`const story = await
@@ -220,19 +257,43 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
           </div>
           <div className="absolute inset-0 bg-gradient-to-r from-transparent to-card/80" />
 
-          <Button
-            size="icon"
-            className="relative z-10 h-10 w-10 rounded-full bg-primary/90 hover:bg-primary opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={handlePlay}
-          >
-            {isCurrentlyPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-          </Button>
+          {isCurrentlyPlaying ? (
+            <div className="relative z-10 flex items-center gap-[3px]">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-1 bg-primary rounded-full animate-waveform"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                />
+              ))}
+            </div>
+          ) : (
+            <Button
+              size="icon"
+              className="relative z-10 h-10 w-10 rounded-full bg-primary/90 hover:bg-primary opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={handlePlay}
+            >
+              <Play className="h-4 w-4 ml-0.5" />
+            </Button>
+          )}
         </div>
 
-        {/* Right: Content */}
         <div className="flex-1 min-w-0">
-          {/* Tags */}
           <div className="flex flex-wrap gap-1.5 mb-2">
+            {isCurrentlyPlaying && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-primary/20 text-primary flex items-center gap-1">
+                <span className="flex items-center gap-[1px]">
+                  {[...Array(3)].map((_, i) => (
+                    <span
+                      key={i}
+                      className="w-0.5 h-2 bg-primary rounded-full animate-waveform"
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    />
+                  ))}
+                </span>
+                Playing
+              </span>
+            )}
             {language && (
               <span className={cn("px-2 py-0.5 rounded text-[10px] font-medium uppercase", getLanguageColor(language))}>
                 {language}
@@ -243,15 +304,20 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
             </span>
           </div>
 
-          {/* Title */}
-          <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors line-clamp-1">{story.title}</h3>
+          <h3
+            className={cn(
+              "font-semibold mb-1 transition-colors line-clamp-1",
+              isCurrentItem ? "text-primary" : "group-hover:text-primary",
+            )}
+          >
+            {story.title}
+          </h3>
 
           <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
             {repo?.description ||
               "An auditory exploration of the codebase, bringing its architecture and patterns to life through story."}
           </p>
 
-          {/* Stats row - Removed lines_of_code reference */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -271,7 +337,6 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
             )}
           </div>
 
-          {/* Repo */}
           {repo && (
             <div className="flex items-center gap-1.5 mt-2 text-[11px] text-muted-foreground">
               <Github className="h-3 w-3" />
@@ -284,18 +349,22 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
       </Link>
 
       <div className="flex items-center gap-2">
+        {hasAudio && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+            onClick={handleAddToQueue}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        )}
         <Button
-          variant="ghost"
           size="icon"
-          className="h-8 w-8 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
-          onClick={handleAddToQueue}
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-        {/* Mobile play button */}
-        <Button
-          size="icon"
-          className="sm:hidden h-10 w-10 rounded-full bg-primary hover:bg-primary/90"
+          className={cn(
+            "sm:hidden h-10 w-10 rounded-full",
+            isCurrentlyPlaying ? "bg-primary/20 text-primary" : "bg-primary hover:bg-primary/90",
+          )}
           onClick={handlePlay}
         >
           {isCurrentlyPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}

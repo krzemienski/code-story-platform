@@ -274,3 +274,34 @@
 .animate-breathe {
   animation: breathe 8s ease-in-out infinite;
 }
+
+/* Add waveform animation for floating player bars */
+@keyframes waveform-anim {
+  0%,
+  100% {
+    height: 4px;
+  }
+  25% {
+    height: 16px;
+  }
+  50% {
+    height: 8px;
+  }
+  75% {
+    height: 24px;
+  }
+}
+
+.animate-waveform {
+  animation: waveform-anim 1.2s ease-in-out infinite;
+}
+
+/* Ensure body has padding for floating player */
+body {
+  padding-bottom: 80px;
+}
+
+/* When player is hidden, remove padding */
+body:has(.floating-player-hidden) {
+  padding-bottom: 0;
+}

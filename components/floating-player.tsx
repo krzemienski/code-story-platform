@@ -15,9 +15,10 @@ import {
   X,
   ListMusic,
   Loader2,
+  RotateCcw,
+  RotateCw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Waveform } from "@/components/ui/waveform"
 import Link from "next/link"
 
 export function FloatingPlayer() {
@@ -73,10 +74,20 @@ export function FloatingPlayer() {
       <div className="relative mx-auto max-w-7xl px-4">
         {/* Mini player bar */}
         <div className="flex h-20 items-center gap-4">
-          {/* Track info */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="relative h-12 w-12 rounded-lg bg-primary/20 flex items-center justify-center overflow-hidden flex-shrink-0">
-              <Waveform isPlaying={isPlaying} barCount={5} className="h-6" />
+              <div className="flex items-center justify-center gap-[2px]">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={cn("w-1 bg-primary rounded-full transition-all", isPlaying ? "animate-waveform" : "h-2")}
+                    style={{
+                      height: isPlaying ? undefined : "8px",
+                      animationDelay: `${i * 0.1}s`,
+                    }}
+                  />
+                ))}
+              </div>
             </div>
             <div className="min-w-0 flex-1">
               <Link
@@ -89,20 +100,28 @@ export function FloatingPlayer() {
             </div>
           </div>
 
-          {/* Center controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hidden sm:flex"
+              onClick={skipPrevious}
+            >
+              <SkipBack className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:text-foreground"
               onClick={() => skipBackward(15)}
+              title="Back 15 seconds"
             >
-              <SkipBack className="h-4 w-4" />
+              <RotateCcw className="h-4 w-4" />
             </Button>
             <Button
               variant="default"
               size="icon"
-              className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90"
+              className="h-12 w-12 rounded-full bg-primary hover:bg-primary/90"
               onClick={toggle}
               disabled={isBuffering}
             >
@@ -119,14 +138,24 @@ export function FloatingPlayer() {
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:text-foreground"
               onClick={() => skipForward(15)}
+              title="Forward 15 seconds"
+            >
+              <RotateCw className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hidden sm:flex"
+              onClick={skipNext}
+              disabled={queueIndex >= queue.length - 1}
             >
               <SkipForward className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Progress and time */}
-          <div className="hidden sm:flex items-center gap-3 flex-1 max-w-md">
-            <span className="text-xs text-muted-foreground w-10 text-right font-mono">{formatTime(currentTime)}</span>
+          <div className="hidden md:flex items-center gap-3 flex-1 max-w-md">
+            <span className="text-xs text-muted-foreground w-12 text-right font-mono">{formatTime(currentTime)}</span>
             <Slider
               value={[currentTime]}
               max={duration || 100}
@@ -134,12 +163,12 @@ export function FloatingPlayer() {
               onValueChange={(v) => seek(v[0])}
               className="flex-1"
             />
-            <span className="text-xs text-muted-foreground w-10 font-mono">{formatTime(duration)}</span>
+            <span className="text-xs text-muted-foreground w-12 font-mono">{formatTime(duration)}</span>
           </div>
 
           {/* Right controls */}
           <div className="flex items-center gap-1">
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
@@ -160,7 +189,7 @@ export function FloatingPlayer() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 text-xs font-mono text-muted-foreground hover:text-foreground"
+              className="h-8 text-xs font-mono text-muted-foreground hover:text-foreground px-2"
               onClick={() => {
                 const idx = playbackRates.indexOf(playbackRate)
                 setPlaybackRate(playbackRates[(idx + 1) % playbackRates.length])
@@ -173,10 +202,16 @@ export function FloatingPlayer() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                className={cn(
+                  "h-8 w-8 text-muted-foreground hover:text-foreground",
+                  isPlayerExpanded && "text-primary",
+                )}
                 onClick={() => setPlayerExpanded(!isPlayerExpanded)}
               >
                 <ListMusic className="h-4 w-4" />
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
+                  {queue.length}
+                </span>
               </Button>
             )}
 
@@ -201,7 +236,7 @@ export function FloatingPlayer() {
         </div>
 
         {/* Mobile progress bar */}
-        <div className="sm:hidden absolute top-0 left-0 right-0 h-1 bg-secondary">
+        <div className="md:hidden absolute top-0 left-0 right-0 h-1 bg-secondary">
           <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
         </div>
 
@@ -209,20 +244,35 @@ export function FloatingPlayer() {
         {isPlayerExpanded && (
           <div className="border-t border-border pb-4">
             <div className="py-4">
-              <h4 className="text-sm font-semibold text-foreground mb-3">Queue</h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-foreground">Queue ({queue.length})</h4>
+                {queue.length > 1 && (
+                  <span className="text-xs text-muted-foreground">
+                    Playing {queueIndex + 1} of {queue.length}
+                  </span>
+                )}
+              </div>
               <div className="space-y-1 max-h-64 overflow-y-auto">
                 {queue.map((item, index) => (
                   <div
                     key={item.id}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors",
+                      "flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors group",
                       index === queueIndex ? "bg-primary/10 text-primary" : "hover:bg-secondary text-foreground",
                     )}
                     onClick={() => playFromQueue(index)}
                   >
                     <div className="w-6 text-center text-xs text-muted-foreground">
                       {index === queueIndex && isPlaying ? (
-                        <Waveform isPlaying barCount={3} className="h-4" />
+                        <div className="flex items-center justify-center gap-[1px]">
+                          {[...Array(3)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="w-0.5 bg-primary rounded-full animate-waveform"
+                              style={{ animationDelay: `${i * 0.1}s` }}
+                            />
+                          ))}
+                        </div>
                       ) : (
                         index + 1
                       )}

@@ -1,10 +1,13 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Play, ListPlus, Github } from "lucide-react"
+import { Play, ListPlus, Github, Pause, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useAudioPlayerContext } from "@/lib/audio-player-context"
 
 interface FeaturedStory {
   id: string
@@ -14,6 +17,8 @@ interface FeaturedStory {
   repo_name?: string
   primary_language?: string
   actual_duration_seconds?: number
+  audio_url?: string
+  audio_chunks?: string[]
   waveformColor?: string
 }
 
@@ -47,12 +52,17 @@ const DEFAULT_STORIES: FeaturedStory[] = [
 export function FeaturedHero({ stories = [] }: FeaturedHeroProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
+  const { play, addToQueue, currentItem, isPlaying, isBuffering } = useAudioPlayerContext()
 
   const displayStories = stories.length > 0 ? stories : DEFAULT_STORIES
   const story = displayStories[currentIndex]
   const waveformColor = story.primary_language
-    ? LANGUAGE_COLORS[story.primary_language] || "from-purple-500 to-violet-600"
-    : "from-purple-500 to-violet-600"
+    ? LANGUAGE_COLORS[story.primary_language] || "from-primary/60 to-primary"
+    : "from-primary/60 to-primary"
+
+  const isThisPlaying = currentItem?.id === story.id && isPlaying
+  const isThisBuffering = currentItem?.id === story.id && isBuffering
+  const hasAudio = story.audio_url || (story.audio_chunks && story.audio_chunks.length > 0)
 
   const goTo = (index: number) => {
     if (isAnimating || displayStories.length <= 1) return
@@ -76,6 +86,42 @@ export function FeaturedHero({ stories = [] }: FeaturedHeroProps) {
     return `${mins}m`
   }
 
+  const handleListenClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!hasAudio) {
+      // No audio, navigate to story page
+      window.location.href = `/story/${story.id}`
+      return
+    }
+
+    play({
+      id: story.id,
+      title: story.title,
+      repoName: story.repo_owner && story.repo_name ? `${story.repo_owner}/${story.repo_name}` : undefined,
+      audioUrl: story.audio_url,
+      audioChunks: story.audio_chunks,
+      duration: story.actual_duration_seconds,
+    })
+  }
+
+  const handleQueueClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!hasAudio) return
+
+    addToQueue({
+      id: story.id,
+      title: story.title,
+      repoName: story.repo_owner && story.repo_name ? `${story.repo_owner}/${story.repo_name}` : undefined,
+      audioUrl: story.audio_url,
+      audioChunks: story.audio_chunks,
+      duration: story.actual_duration_seconds,
+    })
+  }
+
   const titleParts = story.title.split(":").map((s) => s.trim())
   const mainTitle = titleParts[0] || story.title
   const subtitle = titleParts[1] || ""
@@ -92,13 +138,15 @@ export function FeaturedHero({ stories = [] }: FeaturedHeroProps) {
         <div className="lg:col-span-3">
           <Link href={story.id.startsWith("demo") ? "#generate" : `/story/${story.id}`}>
             <div className="relative rounded-2xl border border-border bg-card/50 overflow-hidden hover:border-primary/50 transition-colors cursor-pointer group">
-              {/* Waveform visualization */}
-              <div className={cn("h-32 relative overflow-hidden bg-gradient-to-r opacity-20", waveformColor)}>
+              <div className={cn("h-32 relative overflow-hidden bg-gradient-to-r opacity-30", waveformColor)}>
                 <div className="absolute inset-0 flex items-end justify-center gap-[2px] px-8 pb-4">
                   {[...Array(60)].map((_, i) => (
                     <div
                       key={i}
-                      className="w-1 bg-white/80 rounded-full waveform-bar"
+                      className={cn(
+                        "w-1 bg-white/80 rounded-full transition-all duration-300",
+                        isThisPlaying && "animate-waveform",
+                      )}
                       style={{
                         height: `${20 + Math.sin(i * 0.3) * 40 + Math.random() * 20}%`,
                         animationDelay: `${i * 0.05}s`,
@@ -106,6 +154,13 @@ export function FeaturedHero({ stories = [] }: FeaturedHeroProps) {
                     />
                   ))}
                 </div>
+                {/* Now Playing indicator */}
+                {isThisPlaying && (
+                  <div className="absolute top-3 left-3 flex items-center gap-2 px-2 py-1 rounded-full bg-background/80 backdrop-blur-sm">
+                    <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    <span className="text-[10px] uppercase tracking-wider font-medium">Now Playing</span>
+                  </div>
+                )}
               </div>
 
               {/* Content */}
@@ -134,14 +189,34 @@ export function FeaturedHero({ stories = [] }: FeaturedHeroProps) {
                 )}
 
                 <div className="flex items-center gap-3">
-                  <Button className="bg-foreground text-background hover:bg-foreground/90 gap-2 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <Play className="h-4 w-4" />
-                    Listen Now
+                  <Button
+                    onClick={handleListenClick}
+                    className={cn(
+                      "gap-2 transition-colors",
+                      isThisPlaying
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-foreground text-background hover:bg-foreground/90 group-hover:bg-primary group-hover:text-primary-foreground",
+                    )}
+                  >
+                    {isThisBuffering ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : isThisPlaying ? (
+                      <Pause className="h-4 w-4" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                    {isThisPlaying ? "Playing" : "Listen Now"}
                   </Button>
-                  <Button variant="outline" className="gap-2 bg-transparent border-border hover:bg-secondary">
-                    <ListPlus className="h-4 w-4" />
-                    Queue
-                  </Button>
+                  {hasAudio && (
+                    <Button
+                      variant="outline"
+                      className="gap-2 bg-transparent border-border hover:bg-secondary"
+                      onClick={handleQueueClick}
+                    >
+                      <ListPlus className="h-4 w-4" />
+                      Queue
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -186,7 +261,7 @@ function CreateYourOwn() {
 
   const handleGenerate = () => {
     if (!isValid) return
-    window.location.href = `/?url=${encodeURIComponent(url.trim())}`
+    window.location.href = `/dashboard/new?url=${encodeURIComponent(url.trim())}`
   }
 
   return (
