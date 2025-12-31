@@ -6,7 +6,7 @@ import { analyzeRepository, summarizeRepoStructure } from "@/lib/agents/github"
 import { getStoryPrompt } from "@/lib/agents/prompts"
 import { log } from "@/lib/agents/log-helper"
 
-export const maxDuration = 600 // 10 minutes max for API route
+export const maxDuration = 300 // 5 minutes max (Vercel limit)
 
 interface GenerateRequest {
   storyId: string
