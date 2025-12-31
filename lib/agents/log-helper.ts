@@ -1,11 +1,10 @@
-// Helper to write processing logs to Supabase
-import type { SupabaseClient } from "@supabase/supabase-js"
+// Helper to write processing logs to Supabase using service role
+import { createServiceClient } from "@/lib/supabase/service"
 
 export type AgentName = "System" | "Analyzer" | "Architect" | "Narrator" | "Synthesizer"
 export type LogLevel = "info" | "success" | "warning" | "error"
 
 export async function writeLog(
-  supabase: SupabaseClient,
   storyId: string,
   agent: AgentName,
   action: string,
@@ -13,6 +12,7 @@ export async function writeLog(
   level: LogLevel = "info",
 ) {
   try {
+    const supabase = createServiceClient()
     await supabase.from("processing_logs").insert({
       story_id: storyId,
       agent_name: agent,
@@ -25,45 +25,19 @@ export async function writeLog(
   }
 }
 
-// Convenience functions for each agent
 export const log = {
-  system: (
-    supabase: SupabaseClient,
-    storyId: string,
-    action: string,
-    details?: Record<string, any>,
-    level?: LogLevel,
-  ) => writeLog(supabase, storyId, "System", action, details, level),
+  system: (storyId: string, action: string, details?: Record<string, any>, level?: LogLevel) =>
+    writeLog(storyId, "System", action, details, level),
 
-  analyzer: (
-    supabase: SupabaseClient,
-    storyId: string,
-    action: string,
-    details?: Record<string, any>,
-    level?: LogLevel,
-  ) => writeLog(supabase, storyId, "Analyzer", action, details, level),
+  analyzer: (storyId: string, action: string, details?: Record<string, any>, level?: LogLevel) =>
+    writeLog(storyId, "Analyzer", action, details, level),
 
-  architect: (
-    supabase: SupabaseClient,
-    storyId: string,
-    action: string,
-    details?: Record<string, any>,
-    level?: LogLevel,
-  ) => writeLog(supabase, storyId, "Architect", action, details, level),
+  architect: (storyId: string, action: string, details?: Record<string, any>, level?: LogLevel) =>
+    writeLog(storyId, "Architect", action, details, level),
 
-  narrator: (
-    supabase: SupabaseClient,
-    storyId: string,
-    action: string,
-    details?: Record<string, any>,
-    level?: LogLevel,
-  ) => writeLog(supabase, storyId, "Narrator", action, details, level),
+  narrator: (storyId: string, action: string, details?: Record<string, any>, level?: LogLevel) =>
+    writeLog(storyId, "Narrator", action, details, level),
 
-  synthesizer: (
-    supabase: SupabaseClient,
-    storyId: string,
-    action: string,
-    details?: Record<string, any>,
-    level?: LogLevel,
-  ) => writeLog(supabase, storyId, "Synthesizer", action, details, level),
+  synthesizer: (storyId: string, action: string, details?: Record<string, any>, level?: LogLevel) =>
+    writeLog(storyId, "Synthesizer", action, details, level),
 }

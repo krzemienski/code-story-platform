@@ -3,9 +3,10 @@ import Link from "next/link"
 import { cookies } from "next/headers"
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Download, Share2, Github, RefreshCw, Clock, Calendar, FileText, ExternalLink } from "lucide-react"
+import { ArrowLeft, Download, Share2, Github, Clock, Calendar, FileText, ExternalLink } from "lucide-react"
 import { StoryPlayer } from "@/components/story-player"
 import { StoryProcessing } from "@/components/story-processing"
+import { RestartButton } from "@/components/restart-button"
 import type { Story, StoryChapter } from "@/lib/types"
 import { DEMO_STORIES, DEMO_CHAPTERS } from "@/lib/demo-mode"
 
@@ -22,29 +23,6 @@ function formatDuration(seconds: number | null): string {
   const minutes = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${minutes}:${secs.toString().padStart(2, "0")}`
-}
-
-function RestartButton({ storyId, isDemo }: { storyId: string; isDemo: boolean }) {
-  "use client"
-
-  const handleRestart = async () => {
-    if (isDemo) {
-      window.location.reload()
-      return
-    }
-
-    const res = await fetch(`/api/stories/${storyId}/restart`, { method: "POST" })
-    if (res.ok) {
-      window.location.reload()
-    }
-  }
-
-  return (
-    <Button onClick={handleRestart}>
-      <RefreshCw className="mr-2 h-4 w-4" />
-      Try Again
-    </Button>
-  )
 }
 
 export default async function StoryPage({
@@ -76,7 +54,6 @@ export default async function StoryPage({
       notFound()
     }
 
-    // Fetch story with repository info
     const { data: storyData, error } = await supabase
       .from("stories")
       .select(`
@@ -92,7 +69,6 @@ export default async function StoryPage({
 
     story = storyData
 
-    // Fetch chapters
     const { data: chaptersData } = await supabase
       .from("story_chapters")
       .select("*")
@@ -105,7 +81,6 @@ export default async function StoryPage({
   const typedStory = story as Story & { repository?: { repo_name: string; repo_owner: string; repo_url: string } }
   const typedChapters = chapters as StoryChapter[]
 
-  // Parse chapters from story JSON if no separate chapters exist
   const displayChapters: StoryChapter[] =
     typedChapters.length > 0
       ? typedChapters
@@ -225,13 +200,13 @@ export default async function StoryPage({
                 <Share2 className="mr-2 h-4 w-4" />
                 Share
               </Button>
-              <RestartButton storyId={id} isDemo={isDemo} />
+              <RestartButton storyId={id} isDemo={isDemo} variant="outline" label="Regenerate" />
             </div>
           )}
         </div>
       </div>
 
-      {/* Processing state - Client component with real-time updates */}
+      {/* Processing state */}
       {isProcessing && (
         <StoryProcessing
           storyId={id}

@@ -1,9 +1,13 @@
 // Restart story generation - clears logs and re-triggers the pipeline
 import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storyId } = await params
   const supabase = await createClient()
+
+  const url = new URL(req.url)
+  const baseUrl = url.origin
 
   const {
     data: { user },
@@ -25,8 +29,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return Response.json({ error: "Story not found" }, { status: 404 })
   }
 
-  // Clear old processing logs
-  await supabase.from("processing_logs").delete().eq("story_id", storyId)
+  const serviceClient = createServiceClient()
+  await serviceClient.from("processing_logs").delete().eq("story_id", storyId)
 
   // Reset story status
   await supabase
@@ -42,12 +46,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .eq("id", storyId)
 
   // Trigger generation
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : "http://localhost:3000"
-
   fetch(`${baseUrl}/api/stories/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
