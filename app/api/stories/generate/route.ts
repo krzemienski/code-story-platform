@@ -6,7 +6,7 @@ import { analyzeRepository, summarizeRepoStructure } from "@/lib/agents/github"
 import { getStoryPrompt } from "@/lib/agents/prompts"
 import { log } from "@/lib/agents/log-helper"
 
-export const maxDuration = 300 // 5 minutes max
+export const maxDuration = 600 // 10 minutes max for API route
 
 interface GenerateRequest {
   storyId: string
@@ -270,11 +270,17 @@ export async function POST(req: Request) {
       const targetMinutes = story.target_duration_minutes || 15
       const targetWords = targetMinutes * 150
 
-      console.log("[v0] Generating script with Claude, target words:", targetWords)
+      // Calculate tokens needed: roughly 0.75 words per token, plus buffer
+      const estimatedTokensNeeded = Math.ceil(targetWords / 0.75) + 2000
+      const maxTokens = Math.min(estimatedTokensNeeded, 64000) // Cap at 64k for Claude
+
+      console.log("[v0] Generating script with Claude, target words:", targetWords, "maxTokens:", maxTokens)
 
       await log.narrator(storyId, "Writing script with Claude", {
         model: "anthropic/claude-sonnet-4-20250514",
         targetWords,
+        maxTokens,
+        style: story.narrative_style,
       })
 
       let script: string
@@ -285,24 +291,32 @@ export async function POST(req: Request) {
           system: systemPrompt,
           prompt: `Create an audio narrative script for the repository ${repo.repo_owner}/${repo.repo_name}.
 
+NARRATIVE STYLE: ${story.narrative_style.toUpperCase()}
+TARGET DURATION: ${targetMinutes} minutes (~${targetWords} words)
 USER'S INTENT: ${story.title}
 
 REPOSITORY ANALYSIS:
 ${repoSummary}
 
 KEY DIRECTORIES TO COVER:
-${analysis.keyDirectories.slice(0, 10).join("\n")}
+${analysis.keyDirectories.slice(0, 15).join("\n")}
 
-TARGET LENGTH: ${targetWords} words (~${targetMinutes} minutes of audio)
+CRITICAL INSTRUCTIONS:
+1. You MUST generate approximately ${targetWords} words - this is a ${targetMinutes}-minute audio experience
+2. Style is "${story.narrative_style}" - fully commit to this style throughout
+3. ${story.narrative_style === "fiction" ? "Create a complete fictional world with characters, plot, conflict, and resolution. Code components ARE your characters." : ""}
+4. Cover ALL major aspects of the codebase - do not rush or summarize
+5. Include natural pauses (...) for dramatic effect and breathing
+6. Organize into clear sections with smooth transitions
+7. Do NOT include any markdown headers or formatting - just natural prose with paragraph breaks
+8. Make it engaging enough that someone would want to listen for the full ${targetMinutes} minutes
 
-Generate a complete, engaging narrative script that would be read aloud. Include natural pauses (...) and organize into clear sections. Do NOT include any markdown headers or formatting - just natural prose with paragraph breaks.
-
-Begin the narrative now:`,
-          maxTokens: 8000,
-          temperature: 0.7,
+BEGIN YOUR ${targetMinutes}-MINUTE ${story.narrative_style.toUpperCase()} NARRATIVE NOW:`,
+          maxTokens,
+          temperature: 0.8, // Slightly higher for more creative output
         })
         script = result.text
-        console.log("[v0] Claude API call successful, got response")
+        console.log("[v0] Claude API call successful, generated", script.split(/\s+/).length, "words")
       } catch (claudeError) {
         console.error("[v0] Claude API error:", claudeError)
         await log.narrator(storyId, "Claude API failed", { error: String(claudeError) }, "error")
@@ -405,13 +419,21 @@ Output ONLY valid JSON, no other text:`,
       if (elevenLabsKey) {
         const voiceId = story.voice_id || "21m00Tcm4TlvDq8ikWAM"
 
+        // Use Flash v2.5 for longer content (40k char limit vs 10k for multilingual_v2)
+        // This allows larger chunks and faster generation
+        const useFlashModel = script.length > 20000
+        const modelId = useFlashModel ? "eleven_flash_v2_5" : "eleven_multilingual_v2"
+        const maxChunkSize = useFlashModel ? 8000 : 4000 // Larger chunks with Flash model
+
         await log.synthesizer(storyId, "Initializing ElevenLabs voice synthesis", {
           voice: voiceId,
-          model: "eleven_multilingual_v2",
+          model: modelId,
+          totalScriptLength: script.length,
+          useFlashModel,
         })
 
-        const scriptChunks = splitTextIntoChunks(script, 4000)
-        console.log("[v0] Script split into", scriptChunks.length, "chunks")
+        const scriptChunks = splitTextIntoChunks(script, maxChunkSize)
+        console.log("[v0] Script split into", scriptChunks.length, "chunks using model:", modelId)
 
         await log.synthesizer(storyId, "Script chunked for synthesis", {
           totalLength: script.length,
@@ -450,26 +472,35 @@ Output ONLY valid JSON, no other text:`,
               })
               .eq("id", storyId)
 
-            const audioResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-              method: "POST",
-              headers: {
-                "xi-api-key": elevenLabsKey,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                text: chunk,
-                model_id: "eleven_multilingual_v2",
-                voice_settings: {
-                  stability: 0.5,
-                  similarity_boost: 0.75,
-                  style: 0.2,
-                  use_speaker_boost: true,
+            const audioResponse = await fetch(
+              `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
+              {
+                method: "POST",
+                headers: {
+                  "xi-api-key": elevenLabsKey,
+                  "Content-Type": "application/json",
                 },
-                // Use previous chunk text for continuity
-                previous_text: i > 0 ? scriptChunks[i - 1].slice(-500) : undefined,
-                next_text: i < scriptChunks.length - 1 ? scriptChunks[i + 1].slice(0, 500) : undefined,
-              }),
-            })
+                body: JSON.stringify({
+                  text: chunk,
+                  model_id: modelId,
+                  voice_settings: {
+                    // Lower stability for more expressive fiction narration
+                    stability: story.narrative_style === "fiction" ? 0.35 : 0.5,
+                    // High similarity for consistent voice
+                    similarity_boost: 0.8,
+                    // Slight style exaggeration for fiction
+                    style: story.narrative_style === "fiction" ? 0.15 : 0,
+                    // Enable speaker boost for better voice matching
+                    use_speaker_boost: true,
+                  },
+                  // Context for better continuity between chunks
+                  previous_text: i > 0 ? scriptChunks[i - 1].slice(-1000) : undefined,
+                  next_text: i < scriptChunks.length - 1 ? scriptChunks[i + 1].slice(0, 500) : undefined,
+                  // Enable text normalization for proper pronunciation
+                  apply_text_normalization: "auto",
+                }),
+              },
+            )
 
             if (!audioResponse.ok) {
               const errorText = await audioResponse.text()

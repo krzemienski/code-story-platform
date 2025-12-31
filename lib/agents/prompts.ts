@@ -73,77 +73,161 @@ NARRATIVE GUIDELINES:
 
 // Style-specific prompts
 export const NARRATIVE_STYLE_PROMPTS = {
-  fiction: `Transform the code analysis into an engaging fictional narrative.
+  fiction: `Transform the code analysis into an immersive fictional narrative that fully utilizes the entire allocated time.
 
-RULES:
-- Code components become characters with personalities
-- The codebase is a world with locations (modules) and inhabitants (classes/functions)
-- Technical concepts are woven into plot and dialogue
-- Maintain complete technical accuracy while being creative
-- Use metaphors from everyday life to explain complex concepts
+WORLD-BUILDING RULES:
+- The codebase is a living, breathing world with distinct regions (modules/packages)
+- Code components are CHARACTERS with rich personalities, motivations, and relationships
+- Functions are actions characters take; classes are character types or factions
+- Data flows are journeys; API calls are communications between kingdoms
+- Bugs are villains; tests are guardians; documentation is ancient lore
+- Design patterns are cultural traditions passed down through generations
 
-EXAMPLE TONE:
-"In the heart of the FastAPI kingdom, the Depends guardian stood watch. Every request that sought entry had to present its credentials—a sacred token proving its identity."`,
+NARRATIVE STRUCTURE:
+- Begin with an atmospheric introduction to the world
+- Introduce the main characters (core components) with backstories
+- Build tension through conflicts (error handling, edge cases, dependencies)
+- Include dialogue between components explaining their interactions
+- Use dramatic reveals for architectural decisions
+- Create emotional moments around critical code paths
+- End with resolution and hints at future adventures (extensibility)
 
-  documentary: `Create an authoritative documentary-style narrative.
-
-RULES:
-- Present information as factual, investigative journalism
-- Use professional, objective language
-- Include specific metrics, file names, and line references
-- Explain the "why" behind design decisions
-- Structure with clear sections and topic transitions
-
-EXAMPLE TONE:
-"The FastAPI repository contains 247 Python files organized across 12 primary modules. At its architectural core lies a sophisticated dependency injection system."`,
-
-  tutorial: `Create a patient, educational tutorial narrative.
-
-RULES:
-- Explain concepts progressively, building on prior knowledge
-- Use the second person ("When you look at this file, you'll see...")
-- Include "pause and think" moments
-- Anticipate questions and address them
-- Use analogies that relate to everyday experiences
+IMMERSION REQUIREMENTS:
+- Use vivid sensory descriptions for technical concepts
+- Create memorable metaphors that stick with listeners
+- Include character inner monologue to explain logic
+- Use pacing variation: action sequences for hot paths, contemplative moments for configuration
+- Weave in humor and personality throughout
 
 EXAMPLE TONE:
-"Let's start with a question: what happens when a request arrives at your FastAPI application? Don't worry if you're not sure—that's exactly what we're going to explore together."`,
+"Deep in the silicon valleys of the FastAPI realm, where data streams flowed like rivers of light, there lived a guardian named 'Depends'. Unlike the other inhabitants who rushed about their business, Depends stood patient and watchful at every gateway. 'None shall pass,' it would whisper to each approaching request, 'without first proving their worth.' And so began the ancient ritual of authentication..."`,
 
-  podcast: `Create a conversational, podcast-style narrative.
+  documentary: `Create an authoritative, comprehensive documentary-style narrative that fills the entire duration.
 
-RULES:
-- Sound like a knowledgeable friend explaining over coffee
-- Include natural speech patterns: "honestly", "here's the thing", "you know"
-- Express genuine reactions and opinions
-- Use humor where appropriate
-- Share insights as discoveries, not lectures
+DOCUMENTARY STRUCTURE:
+- Opening: Set the historical context and significance of this codebase
+- Act 1: Origins - How and why was this project created?
+- Act 2: Architecture - The grand design and its components
+- Act 3: Deep Dives - Detailed exploration of each major module
+- Act 4: The Human Element - Design decisions and trade-offs
+- Closing: Legacy and future directions
+
+CONTENT REQUIREMENTS:
+- Include specific metrics, file names, line counts, and statistics
+- Explain the "why" behind every major design decision
+- Compare approaches to industry standards and alternatives
+- Discuss historical evolution if visible in the code structure
+- Include "expert insights" explaining nuanced details
+- Cover edge cases, error handling, and defensive programming
+
+PACING:
+- Use transitional phrases: "But this raises an important question..."
+- Include "let's pause and examine this more closely" moments
+- Build anticipation before revealing key architectural insights
 
 EXAMPLE TONE:
-"Okay, so I've been digging through this FastAPI codebase, and honestly? The way they've structured the dependency injection is... chef's kiss."`,
+"The FastAPI repository, comprising 247 Python files organized across 12 primary modules, represents one of the most significant contributions to modern web framework design. But to understand its true innovation, we must first journey back to the limitations that plagued earlier frameworks..."`,
 
-  technical: `Create a dense, technical deep-dive narrative.
+  tutorial: `Create a patient, thorough educational tutorial narrative that builds knowledge progressively over the full duration.
 
-RULES:
-- No simplification—assume expert-level understanding
-- Include specific implementation details
-- Reference exact file paths, class names, function signatures
-- Discuss trade-offs and alternative approaches
-- Use proper technical terminology without explanation
+PEDAGOGICAL STRUCTURE:
+- Foundation Layer: Core concepts everyone must understand first
+- Building Blocks: Individual components explained in isolation
+- Integration Layer: How pieces work together
+- Mastery Layer: Advanced patterns and optimizations
+- Practice Layer: Mental exercises and "what would happen if" scenarios
+
+TEACHING TECHNIQUES:
+- Use the Socratic method: pose questions, then answer them
+- Include "pause and reflect" moments for complex topics
+- Provide multiple analogies for difficult concepts
+- Anticipate and address common misconceptions
+- Use spaced repetition: revisit key concepts throughout
+- Include mental checkpoints: "At this point, you should understand..."
+
+ENGAGEMENT RULES:
+- Address the listener directly: "You might be wondering..."
+- Acknowledge difficulty: "This next part is tricky, but stay with me..."
+- Celebrate progress: "Now you understand the foundation..."
+- Connect new concepts to previously explained ones
 
 EXAMPLE TONE:
-"The dependency resolution algorithm in FastAPI implements a directed acyclic graph traversal with memoization. The solve_dependencies function in dependencies/utils.py performs a depth-first resolution."`,
+"Before we dive into the code, let me ask you something: what happens when you type a URL and hit enter? Don't worry if you're not entirely sure—that's exactly what we're going to explore together, step by step. By the end of this journey, you'll understand not just the 'what' but the 'why' behind every line..."`,
+
+  podcast: `Create an engaging, conversational podcast-style narrative that feels like a chat with a knowledgeable friend.
+
+PODCAST PERSONA:
+- Sound like a senior developer sharing discoveries over coffee
+- Express genuine enthusiasm, surprise, and occasional frustration
+- Include personal opinions and preferences (clearly marked as such)
+- Use humor, but never at the expense of accuracy
+- Share "war stories" that relate to the code patterns
+
+CONVERSATION FLOW:
+- Start with a hook: something surprising or intriguing about the codebase
+- Use natural tangents that circle back to the main topic
+- Include "sidebar" discussions on related topics
+- React authentically to code: "Wait, that's actually really clever..."
+- Address the listener as if they're sitting across from you
+
+SPEECH PATTERNS:
+- Use filler words sparingly but naturally: "so", "like", "basically"
+- Include self-corrections: "Well, actually, let me rephrase that..."
+- Express thinking out loud: "Hmm, why would they do it this way?"
+- Use rhetorical questions frequently
+
+EXAMPLE TONE:
+"Okay, so I've been poking around this codebase for a while now, and honestly? I keep finding these little gems that make me go 'oh, that's clever.' Like, you know how most frameworks handle dependency injection? Well, these folks took a completely different approach, and—here's the thing—it actually works better in most cases. Let me show you what I mean..."`,
+
+  technical: `Create an exhaustive technical deep-dive narrative for expert practitioners.
+
+TECHNICAL DEPTH:
+- Assume expert-level understanding of programming concepts
+- Include specific implementation details, algorithms, and data structures
+- Reference exact file paths, class names, function signatures, and line numbers
+- Discuss Big-O complexity, memory implications, and performance characteristics
+- Compare implementations to academic papers and industry best practices
+- Analyze thread safety, race conditions, and edge cases
+
+COVERAGE REQUIREMENTS:
+- Entry points and initialization sequences
+- Core algorithms and their implementations
+- Data flow and state management
+- Error handling and recovery mechanisms
+- Security considerations and attack surfaces
+- Testing strategies and coverage analysis
+- Build and deployment architecture
+
+ANALYSIS STYLE:
+- Use precise technical terminology without simplification
+- Include code snippets described verbally with exact syntax
+- Discuss trade-offs between alternative implementations
+- Reference design patterns by their formal names
+- Include metrics: cyclomatic complexity, coupling, cohesion
+
+EXAMPLE TONE:
+"The dependency resolution algorithm implements a topological sort over a directed acyclic graph with memoization. In dependencies/utils.py, the solve_dependencies function at line 142 performs depth-first traversal, maintaining a seen set for cycle detection. The worst-case time complexity is O(V + E) where V represents the number of dependencies and E represents their relationships. Notably, the implementation uses a custom Depends class that implements __hash__ for efficient set operations..."`,
 }
 
-export function getStoryPrompt(style: string, expertise: string): string {
+export function getStoryPrompt(style: string, expertise: string, targetMinutes?: number): string {
   const stylePrompt =
     NARRATIVE_STYLE_PROMPTS[style as keyof typeof NARRATIVE_STYLE_PROMPTS] || NARRATIVE_STYLE_PROMPTS.documentary
 
   const expertiseModifier =
     expertise === "beginner"
-      ? "\n\nADDITIONAL: Explain all technical terms. Use simple analogies. Be patient and thorough."
+      ? "\n\nEXPERTISE ADAPTATION: Explain all technical terms using simple analogies. Be patient and thorough. Never assume prior knowledge."
       : expertise === "expert"
-        ? "\n\nADDITIONAL: Be concise. Skip basic explanations. Focus on implementation details and edge cases."
-        : "\n\nADDITIONAL: Assume programming knowledge but explain domain-specific concepts."
+        ? "\n\nEXPERTISE ADAPTATION: Be technically precise. Skip basic explanations. Focus on implementation details, edge cases, and nuances."
+        : "\n\nEXPERTISE ADAPTATION: Assume general programming knowledge but explain domain-specific and framework-specific concepts."
 
-  return STORY_ARCHITECT_PROMPT + "\n\nSTYLE:\n" + stylePrompt + expertiseModifier
+  const durationGuidance = targetMinutes
+    ? `\n\nDURATION REQUIREMENT: This narrative MUST be comprehensive enough for ${targetMinutes} minutes of audio (~${targetMinutes * 150} words). 
+- Do NOT summarize or abbreviate - explore every significant aspect in detail
+- Include rich descriptions, multiple examples, and thorough explanations
+- If the style is fiction, include full character development, world-building, and plot arcs
+- Cover ALL major components, not just the highlights
+- Use the full allocated time to create an immersive, complete experience`
+    : ""
+
+  return STORY_ARCHITECT_PROMPT + "\n\nSTYLE:\n" + stylePrompt + expertiseModifier + durationGuidance
 }
