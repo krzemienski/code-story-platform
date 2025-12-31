@@ -3,7 +3,7 @@
 import type React from "react"
 
 import Link from "next/link"
-import { Clock, Star, Github, Play, Plus, Pause } from "lucide-react"
+import { Clock, Star, Github, Play, Plus, Pause, Mic, Film, Sparkles, GraduationCap, Cpu } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAudioPlayerContext } from "@/lib/audio-player-context"
@@ -41,16 +41,41 @@ const LANGUAGE_COLORS: Record<string, string> = {
   default: "bg-primary/20 text-primary",
 }
 
-const STYLE_LABELS: Record<string, string> = {
-  documentary: "Documentary",
-  tutorial: "Tutorial",
-  podcast: "Podcast",
-  fiction: "Fiction",
-  technical: "Technical",
-  systems: "Systems",
-  frontend: "Frontend",
-  "machine learning": "Machine Learning",
-  runtime: "Runtime",
+const STYLE_CONFIG: Record<string, { color: string; bgColor: string; icon: React.ReactNode; label: string }> = {
+  podcast: {
+    color: "text-purple-400",
+    bgColor: "bg-purple-500/20",
+    icon: <Mic className="h-3 w-3" />,
+    label: "Podcast",
+  },
+  documentary: {
+    color: "text-blue-400",
+    bgColor: "bg-blue-500/20",
+    icon: <Film className="h-3 w-3" />,
+    label: "Documentary",
+  },
+  fiction: {
+    color: "text-amber-400",
+    bgColor: "bg-amber-500/20",
+    icon: <Sparkles className="h-3 w-3" />,
+    label: "Fiction",
+  },
+  tutorial: {
+    color: "text-green-400",
+    bgColor: "bg-green-500/20",
+    icon: <GraduationCap className="h-3 w-3" />,
+    label: "Tutorial",
+  },
+  technical: {
+    color: "text-red-400",
+    bgColor: "bg-red-500/20",
+    icon: <Cpu className="h-3 w-3" />,
+    label: "Technical",
+  },
+}
+
+function getStyleConfig(style: string) {
+  return STYLE_CONFIG[style.toLowerCase()] || STYLE_CONFIG.documentary
 }
 
 function getLanguageColor(language?: string | null): string {
@@ -81,6 +106,7 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
   const { play, addToQueue, currentItem, isPlaying, toggle } = useAudioPlayerContext()
   const repo = story.code_repositories
   const language = repo?.primary_language
+  const styleConfig = getStyleConfig(story.narrative_style)
 
   const isCurrentlyPlaying = currentItem?.id === story.id && isPlaying
   const isCurrentItem = currentItem?.id === story.id
@@ -187,8 +213,15 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
                   {language}
                 </span>
               )}
-              <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-secondary text-muted-foreground">
-                {STYLE_LABELS[story.narrative_style] || story.narrative_style}
+              <span
+                className={cn(
+                  "px-2 py-0.5 rounded text-[10px] font-medium uppercase flex items-center gap-1",
+                  styleConfig.bgColor,
+                  styleConfig.color,
+                )}
+              >
+                {styleConfig.icon}
+                {styleConfig.label}
               </span>
             </div>
 
@@ -249,10 +282,10 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
       <Link href={`/story/${story.id}`} className="flex gap-4 sm:gap-6 flex-1">
         <div className="hidden sm:flex w-40 h-24 rounded-lg bg-secondary/30 relative overflow-hidden shrink-0 items-center justify-center">
           <div className="absolute inset-0 p-2 font-mono text-[8px] text-muted-foreground/40 leading-relaxed overflow-hidden">
-            <pre>{`const story = await
+            <pre>{`const tail = await
   generate({
     repo: url,
-    style: 'fiction'
+    style: '${story.narrative_style}'
   });`}</pre>
           </div>
           <div className="absolute inset-0 bg-gradient-to-r from-transparent to-card/80" />
@@ -262,7 +295,7 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
               {[...Array(5)].map((_, i) => (
                 <div
                   key={i}
-                  className="w-1 bg-primary rounded-full animate-waveform"
+                  className={cn("w-1 rounded-full animate-waveform", styleConfig.bgColor.replace("/20", ""))}
                   style={{ animationDelay: `${i * 0.1}s` }}
                 />
               ))}
@@ -281,12 +314,12 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap gap-1.5 mb-2">
             {isCurrentlyPlaying && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-primary/20 text-primary flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-green-500/20 text-green-400 flex items-center gap-1">
                 <span className="flex items-center gap-[1px]">
                   {[...Array(3)].map((_, i) => (
                     <span
                       key={i}
-                      className="w-0.5 h-2 bg-primary rounded-full animate-waveform"
+                      className="w-0.5 h-2 bg-green-400 rounded-full animate-waveform"
                       style={{ animationDelay: `${i * 0.1}s` }}
                     />
                   ))}
@@ -294,14 +327,21 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
                 Playing
               </span>
             )}
+            <span
+              className={cn(
+                "px-2 py-0.5 rounded text-[10px] font-medium uppercase flex items-center gap-1",
+                styleConfig.bgColor,
+                styleConfig.color,
+              )}
+            >
+              {styleConfig.icon}
+              {styleConfig.label}
+            </span>
             {language && (
               <span className={cn("px-2 py-0.5 rounded text-[10px] font-medium uppercase", getLanguageColor(language))}>
                 {language}
               </span>
             )}
-            <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-secondary text-muted-foreground">
-              {STYLE_LABELS[story.narrative_style] || story.narrative_style}
-            </span>
           </div>
 
           <h3
@@ -315,7 +355,7 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
 
           <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
             {repo?.description ||
-              "An auditory exploration of the codebase, bringing its architecture and patterns to life through story."}
+              "An auditory exploration of the codebase, bringing its architecture and patterns to life."}
           </p>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
@@ -363,7 +403,9 @@ export function ChronicleCard({ story, variant = "list" }: ChronicleCardProps) {
           size="icon"
           className={cn(
             "sm:hidden h-10 w-10 rounded-full",
-            isCurrentlyPlaying ? "bg-primary/20 text-primary" : "bg-primary hover:bg-primary/90",
+            isCurrentlyPlaying
+              ? styleConfig.bgColor.replace("/20", "") + " " + styleConfig.color
+              : "bg-primary hover:bg-primary/90",
           )}
           onClick={handlePlay}
         >

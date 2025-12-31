@@ -33,7 +33,7 @@ export function Navbar() {
             <Logo />
           </Link>
 
-          {/* Desktop nav links */}
+          {/* Desktop nav links - Updated to use "Tales" terminology */}
           <div className="hidden md:flex items-center gap-1">
             <Link
               href="/discover"
@@ -44,7 +44,7 @@ export function Navbar() {
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
               )}
             >
-              Stories
+              Tales
             </Link>
             <Link
               href="/discover?tab=trending"
@@ -67,7 +67,7 @@ export function Navbar() {
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
                 )}
               >
-                My Stories
+                My Tales
               </Link>
             )}
           </div>
@@ -91,7 +91,7 @@ export function Navbar() {
                     <span
                       key={i}
                       className="w-0.5 bg-primary rounded-full animate-waveform"
-                      style={{ animationDelay: `${i * 0.1}s` }}
+                      style={{ animationDelay: `${i * 0.1}s`, height: "12px" }}
                     />
                   ))}
                 </span>
@@ -111,7 +111,7 @@ export function Navbar() {
           <Button asChild size="sm" className="bg-primary hover:bg-primary/90">
             <Link href="/#generate">
               <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-              Generate
+              Create Tale
             </Link>
           </Button>
           <UserMenu />
@@ -127,7 +127,7 @@ export function Navbar() {
         </button>
       </nav>
 
-      {/* Mobile menu */}
+      {/* Mobile menu - Updated terminology */}
       <div
         className={cn(
           "overflow-hidden border-b border-border/50 bg-background transition-all duration-300 md:hidden",
@@ -171,7 +171,7 @@ export function Navbar() {
             onClick={() => setMobileMenuOpen(false)}
           >
             <Headphones className="inline-block mr-2 h-4 w-4" />
-            Stories
+            Tales
           </Link>
           <Link
             href="/discover?tab=trending"
@@ -189,7 +189,7 @@ export function Navbar() {
               )}
               onClick={() => setMobileMenuOpen(false)}
             >
-              My Stories
+              My Tales
             </Link>
           )}
           <Link
@@ -204,7 +204,7 @@ export function Navbar() {
             <Button asChild className="w-full bg-primary hover:bg-primary/90">
               <Link href="/#generate" onClick={() => setMobileMenuOpen(false)}>
                 <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                Generate
+                Create Tale
               </Link>
             </Button>
           </div>

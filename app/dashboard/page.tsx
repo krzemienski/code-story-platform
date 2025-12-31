@@ -98,9 +98,9 @@ export default async function DashboardPage() {
             <div>
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                 <BookOpen className="h-6 w-6 text-primary" />
-                Your Tales
+                My Tales
               </h1>
-              <p className="text-muted-foreground">Welcome back, {userName}! Ready to explore more code stories?</p>
+              <p className="text-muted-foreground">Welcome back, {userName}! Ready to explore more code tales?</p>
             </div>
           </div>
           <Button asChild className="bg-primary hover:bg-primary/90">
