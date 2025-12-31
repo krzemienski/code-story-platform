@@ -35,11 +35,11 @@ export function HeroSection() {
           <TaliMascot size="lg" speaking mood="excited" />
         </div>
 
-        {/* Main headline */}
+        {/* Main headline - Fixed "Tail" to "Tale" */}
         <h1 className="text-5xl sm:text-6xl lg:text-7xl font-serif mb-6 leading-tight">
           Generate Your Own
           <br />
-          <span className="gradient-text italic">Code Tail</span>
+          <span className="gradient-text italic">Code Tale</span>
         </h1>
 
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
@@ -47,7 +47,7 @@ export function HeroSection() {
           explore like an adventure.
         </p>
 
-        {/* Create Your Tail Form */}
+        {/* Create Your Tale Form - Fixed button text */}
         <div className="max-w-2xl mx-auto mb-12">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -67,7 +67,7 @@ export function HeroSection() {
               size="lg"
               className="h-14 px-8 bg-primary hover:bg-primary/90 text-primary-foreground gap-2 text-base font-semibold"
             >
-              Generate Tail
+              Generate Tale
               <ArrowRight className="h-5 w-5" />
             </Button>
           </div>
@@ -78,7 +78,7 @@ export function HeroSection() {
           )}
         </div>
 
-        {/* How it works pills */}
+        {/* How it works pills - Fixed "Tail" to "Tale" */}
         <div className="flex flex-wrap justify-center gap-4 mb-12">
           <div className="flex items-center gap-2 px-5 py-3 rounded-full bg-card/80 border border-border backdrop-blur-sm">
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
@@ -96,11 +96,11 @@ export function HeroSection() {
             <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
               <Headphones className="h-4 w-4 text-green-500" />
             </div>
-            <span className="text-sm font-medium">Listen to Your Tail</span>
+            <span className="text-sm font-medium">Listen to Your Tale</span>
           </div>
         </div>
 
-        {/* Tail Types Preview - Color coded by style */}
+        {/* Tale Types Preview - Color coded by style */}
         <div className="mb-8">
           <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider">Choose your experience:</p>
           <div className="flex flex-wrap justify-center gap-2">

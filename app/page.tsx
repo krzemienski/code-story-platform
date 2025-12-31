@@ -4,12 +4,12 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/navbar"
 import { HeroSection } from "@/components/hero-section"
-import { TailsCarousel } from "@/components/tails-carousel"
+import { TalesCarousel } from "@/components/tales-carousel"
 import { ChronicleCard } from "@/components/chronicle-card"
 import { ParallaxBackground } from "@/components/parallax-background"
 import { Logo } from "@/components/logo"
 
-async function getPublicTails() {
+async function getPublicTales() {
   const supabase = await createClient()
   const { data } = await supabase
     .from("stories")
@@ -38,7 +38,7 @@ async function getPublicTails() {
   return data || []
 }
 
-async function getFeaturedTails() {
+async function getFeaturedTales() {
   const supabase = await createClient()
   const { data } = await supabase
     .from("stories")
@@ -65,7 +65,7 @@ async function getFeaturedTails() {
 }
 
 export default async function HomePage() {
-  const [tails, featuredTails] = await Promise.all([getPublicTails(), getFeaturedTails()])
+  const [tales, featuredTales] = await Promise.all([getPublicTales(), getFeaturedTales()])
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -77,24 +77,24 @@ export default async function HomePage() {
         {/* Full-screen Hero Section */}
         <HeroSection />
 
-        {/* Featured Tails Carousel */}
+        {/* Featured Tales Carousel - Fixed "Tails" to "Tales" */}
         <section className="px-4 sm:px-6 lg:px-8 py-12 border-t border-border">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center gap-2 mb-6">
               <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-xs uppercase tracking-[0.2em] text-primary font-semibold">Featured Tails</span>
+              <span className="text-xs uppercase tracking-[0.2em] text-primary font-semibold">Featured Tales</span>
             </div>
 
-            <TailsCarousel tails={featuredTails} />
+            <TalesCarousel tales={featuredTales} />
           </div>
         </section>
 
-        {/* Tail Types Explanation */}
+        {/* Tale Types Explanation - Fixed "Tail" to "Tale" */}
         <section className="px-4 sm:px-6 lg:px-8 py-16 border-t border-border bg-card/20">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-2xl sm:text-3xl font-semibold mb-2">Choose Your Experience</h2>
-              <p className="text-muted-foreground">Every tail can be generated in different formats</p>
+              <p className="text-muted-foreground">Every tale can be generated in different formats</p>
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -146,13 +146,13 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* All Tails List */}
+        {/* All Tales List - Fixed "Tails" to "Tales" throughout */}
         <section className="px-4 sm:px-6 lg:px-8 py-12 border-t border-border">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
               <div>
-                <h2 className="text-2xl sm:text-3xl font-semibold mb-2">Community Tails</h2>
-                <p className="text-muted-foreground">Explore the tails woven from open source projects</p>
+                <h2 className="text-2xl sm:text-3xl font-semibold mb-2">Community Tales</h2>
+                <p className="text-muted-foreground">Explore the tales woven from open source projects</p>
               </div>
 
               <div className="flex items-center gap-2">
@@ -183,16 +183,16 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {tails.length > 0 ? (
+            {tales.length > 0 ? (
               <div className="space-y-4">
-                {tails.map((tail) => (
-                  <ChronicleCard key={tail.id} story={tail} variant="list" />
+                {tales.map((tale) => (
+                  <ChronicleCard key={tale.id} story={tale} variant="list" />
                 ))}
               </div>
             ) : (
               <div className="text-center py-16 text-muted-foreground">
                 <Code className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No tails yet. Be the first to generate one!</p>
+                <p>No tales yet. Be the first to generate one!</p>
               </div>
             )}
 
@@ -200,18 +200,18 @@ export default async function HomePage() {
               <div className="h-12 w-12 rounded-full border border-dashed border-border flex items-center justify-center mb-4">
                 <Plus className="h-5 w-5 text-muted-foreground" />
               </div>
-              <h3 className="font-medium mb-1">Submit Your Tail</h3>
+              <h3 className="font-medium mb-1">Submit Your Tale</h3>
               <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
-                Open a PR to add your generated tail to the collection.
+                Open a PR to add your generated tale to the collection.
               </p>
               <Button variant="outline" className="bg-transparent border-border" asChild>
-                <Link href="/discover">Load More Tails</Link>
+                <Link href="/discover">Load More Tales</Link>
               </Button>
             </div>
           </div>
         </section>
 
-        {/* Open Source Section */}
+        {/* Open Source Section - Fixed "tails" to "tales" */}
         <section className="px-4 sm:px-6 lg:px-8 py-16 sm:py-24 bg-card/30 border-t border-border">
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/10 mb-6">
@@ -223,7 +223,7 @@ export default async function HomePage() {
 
             <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
               Code Tales is designed to run on your infrastructure. Deploy your own instance, generate thousands of
-              tails, and maintain full control over your data and audio generation pipeline.
+              tales, and maintain full control over your data and audio generation pipeline.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

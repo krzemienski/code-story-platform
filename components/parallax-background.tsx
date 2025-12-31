@@ -2,34 +2,9 @@
 
 import { useEffect, useRef, useState } from "react"
 
-// Landscape video (wider aspect ratio)
-const LANDSCAPE_VIDEO = "/images/20251231-1628-01kdv2tv1vefst6s4rqhrwj0h0.mp4"
-// Portrait video (taller aspect ratio)
-const PORTRAIT_VIDEO = "/images/20251231-1628-01kdv2sph6ehkb5gegcy3j933z.mp4"
-
 export function ParallaxBackground() {
   const containerRef = useRef<HTMLDivElement>(null)
   const [scrollY, setScrollY] = useState(0)
-  const [isPortrait, setIsPortrait] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
-
-  useEffect(() => {
-    const checkOrientation = () => {
-      setIsPortrait(window.innerHeight > window.innerWidth)
-    }
-
-    checkOrientation()
-    window.addEventListener("resize", checkOrientation)
-    return () => window.removeEventListener("resize", checkOrientation)
-  }, [])
-
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.play().catch(() => {
-        // Autoplay may be blocked, that's okay
-      })
-    }
-  }, [isPortrait])
 
   useEffect(() => {
     const container = containerRef.current
@@ -45,6 +20,7 @@ export function ParallaxBackground() {
     }
 
     const animate = () => {
+      // Smooth interpolation for parallax
       currentScrollY += (targetScrollY - currentScrollY) * 0.1
 
       if (container) {
@@ -69,41 +45,55 @@ export function ParallaxBackground() {
 
   return (
     <div ref={containerRef} className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-      <div data-parallax="0.2" className="absolute inset-0 w-full h-full">
+      {/* Primary video - code transformation effect */}
+      <div data-parallax="0.3" className="absolute inset-0 w-full h-full">
         <video
-          ref={videoRef}
-          key={isPortrait ? "portrait" : "landscape"}
           autoPlay
           loop
           muted
           playsInline
-          preload="auto"
-          className="absolute inset-0 w-full h-full object-cover opacity-50"
+          className="absolute inset-0 w-full h-full object-cover opacity-40"
           style={{
-            transform: `scale(1.15) translateY(${scrollY * 0.03}px)`,
+            transform: `scale(1.1) translateY(${scrollY * 0.05}px)`,
           }}
         >
-          <source src={isPortrait ? PORTRAIT_VIDEO : LANDSCAPE_VIDEO} type="video/mp4" />
+          <source src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/20251231_1628_01kdv2tv1vefst6s4rqhrwj0h0-XPZaYuVSIKIbSP0X5GRJkSR21ZoPff.mp4" type="video/mp4" />
+        </video>
+      </div>
+
+      {/* Secondary video - waveform/audio visualization effect */}
+      <div data-parallax="0.5" className="absolute inset-0 w-full h-full mix-blend-screen">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover opacity-30"
+          style={{
+            transform: `scale(1.15) translateY(${scrollY * 0.08}px)`,
+          }}
+        >
+          <source src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/20251231_1628_01kdv2sph6ehkb5gegcy3j933z-1pWC9eUqk6DpFXvWtGoxEzlBmTKzhP.mp4" type="video/mp4" />
         </video>
       </div>
 
       {/* Purple overlay gradient to maintain brand colors */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/90"
         style={{
           background: `linear-gradient(
             to bottom,
-            hsl(var(--background) / 0.7) 0%,
-            hsl(var(--background) / 0.4) 30%,
-            hsl(var(--background) / 0.3) 50%,
-            hsl(var(--background) / 0.5) 70%,
-            hsl(var(--background) / 0.9) 100%
+            hsl(var(--background) / 0.85) 0%,
+            hsl(var(--background) / 0.5) 30%,
+            hsl(var(--background) / 0.4) 50%,
+            hsl(var(--background) / 0.6) 70%,
+            hsl(var(--background) / 0.95) 100%
           )`,
         }}
       />
 
-      {/* Purple tint overlay for brand consistency */}
-      <div className="absolute inset-0 bg-purple-900/30 mix-blend-overlay" />
+      {/* Purple tint overlay */}
+      <div className="absolute inset-0 bg-purple-900/20 mix-blend-overlay" />
 
       {/* Animated glow orbs with parallax for depth */}
       <div
