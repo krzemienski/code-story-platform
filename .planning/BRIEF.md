@@ -37,12 +37,12 @@ Transform Code Tales from a basic repository-to-audio platform into a **develope
 4. **Multi-Agent**: Specialized agents with custom skills
 
 ### Agent Architecture
-```
+\`\`\`
 Intent Agent → Repo Analyzer → Story Architect → Voice Director
      │              │                │                │
  Understand     Analyze code    Generate script   Synthesize audio
  user goals     & patterns      with style        with ElevenLabs
-```
+\`\`\`
 
 ### Intent Categories
 - Architecture Understanding

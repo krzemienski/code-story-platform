@@ -17,7 +17,7 @@ Story generation infrastructure exists but does NOT currently fetch/use intent d
 ## What Exists
 
 ### TypeScript Types (`lib/types.ts`)
-```typescript
+\`\`\`typescript
 export interface StoryPlan {
   title: string
   estimated_duration_minutes: number
@@ -33,7 +33,7 @@ export interface ChapterPlan {
   focus_files: string[]
   key_concepts: string[]
 }
-```
+\`\`\`
 
 ### Story Architect Prompt (`lib/agents/prompts.ts`)
 - **21 lines** of base prompt defining story transformation rules

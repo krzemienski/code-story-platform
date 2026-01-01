@@ -13,7 +13,7 @@ Code Tales transforms any public GitHub repository into an audio experience. Whe
 
 ## Architecture
 
-```
+\`\`\`
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              CODE TALES PLATFORM                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -44,7 +44,7 @@ Code Tales transforms any public GitHub repository into an audio experience. Whe
 │  │  └──────────┘ └──────────┘ └─────────┘ └────────┘ └─────────────────┘   ││
 │  └─────────────────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────────────────┘
-```
+\`\`\`
 
 ## Features
 
@@ -59,7 +59,7 @@ Code Tales transforms any public GitHub repository into an audio experience. Whe
 
 ## Project Structure
 
-```
+\`\`\`
 code-story-platform/
 ├── app/
 │   ├── api/
@@ -106,7 +106,7 @@ code-story-platform/
     ├── 003_create_storage_bucket.sql
     ├── 004_add_play_count_function.sql
     └── ...
-```
+\`\`\`
 
 ## How It Works
 
@@ -114,7 +114,7 @@ code-story-platform/
 
 When you submit a GitHub URL, the **Analyzer Agent** fetches:
 
-```typescript
+\`\`\`typescript
 // Fetch repository tree structure
 const tree = await fetchRepoTree(owner, repo)
 
@@ -127,7 +127,7 @@ const analysis = {
   packageJson: await fetchFileContent(owner, repo, 'package.json'),
   metadata: await fetchRepoMetadata(owner, repo)
 }
-```
+\`\`\`
 
 ### 2. Script Generation (`app/api/stories/generate/route.ts`)
 
@@ -138,7 +138,7 @@ The **Narrator Agent** uses Claude to generate a script based on:
 - Target duration (5-45 minutes)
 - User expertise level
 
-```typescript
+\`\`\`typescript
 const result = await generateText({
   model: "anthropic/claude-sonnet-4-20250514",
   system: getStoryPrompt(style, expertise, targetMinutes),
@@ -146,13 +146,13 @@ const result = await generateText({
   maxTokens: estimatedTokensNeeded,
   temperature: 0.8
 })
-```
+\`\`\`
 
 ### 3. Audio Synthesis
 
 The **Synthesizer Agent** converts the script to audio using ElevenLabs:
 
-```typescript
+\`\`\`typescript
 // Split long scripts into chunks (max 8000 chars each)
 const scriptChunks = splitTextIntoChunks(script, 8000)
 
@@ -175,7 +175,7 @@ for (const chunk of scriptChunks) {
   // Upload chunk to Supabase Storage
   await supabase.storage.from("story-audio").upload(filename, audioBuffer)
 }
-```
+\`\`\`
 
 ### 4. Playback (`lib/audio-player-context.tsx`)
 
@@ -200,7 +200,7 @@ The floating player manages:
 
 ### Core Tables
 
-```sql
+\`\`\`sql
 -- User profiles (extends Supabase auth.users)
 profiles (id, email, name, subscription_tier, usage_quota)
 
@@ -216,7 +216,7 @@ stories (id, user_id, repository_id, title, narrative_style,
 
 -- Processing logs for real-time UI
 processing_logs (id, story_id, agent_type, message, details, level)
-```
+\`\`\`
 
 ### Row Level Security
 
@@ -227,7 +227,7 @@ All tables have RLS enabled:
 
 ## Environment Variables
 
-```env
+\`\`\`env
 # Required
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
@@ -237,7 +237,7 @@ ELEVENLABS_API_KEY=sk_...
 # Optional
 GITHUB_TOKEN=ghp_...  # For private repos
 NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=http://localhost:3000/auth/callback
-```
+\`\`\`
 
 ## Getting Started
 
@@ -250,7 +250,7 @@ NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=http://localhost:3000/auth/callback
 
 ### Installation
 
-```bash
+\`\`\`bash
 # Clone the repository
 git clone https://github.com/krzemienski/code-story-platform.git
 cd code-story-platform
@@ -267,7 +267,7 @@ cp .env.example .env.local
 
 # Start development server
 pnpm dev
-```
+\`\`\`
 
 Visit [http://localhost:3000](http://localhost:3000) or [https://codetale.ai](https://codetale.ai)
 
@@ -277,13 +277,13 @@ Visit [http://localhost:3000](http://localhost:3000) or [https://codetale.ai](ht
 
 Triggers story generation for a story record.
 
-```typescript
+\`\`\`typescript
 // Request
 { storyId: string }
 
 // Response
 { success: true, storyId: string }
-```
+\`\`\`
 
 ### GET `/api/stories/[id]`
 

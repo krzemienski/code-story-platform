@@ -31,10 +31,10 @@ The intent system uses **client-side Supabase** rather than dedicated API routes
 ## What's Missing (Deferred)
 
 ### Dedicated API Routes
-```
+\`\`\`
 app/api/intents/route.ts         # GET/POST
 app/api/intents/[id]/route.ts    # GET/PATCH/DELETE
-```
+\`\`\`
 
 **Why Deferred**:
 - Current client-side approach works for web app

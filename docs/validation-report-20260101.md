@@ -22,16 +22,16 @@
 **Root Cause**: Environment variable `ANTHROPIC_BASE_URL=https://ccflare.hack.ski` was set in shell, redirecting Claude API calls to a proxy that returned an HTML dashboard instead of JSON.
 
 **Evidence** (from `/tmp/frontend.log`):
-```
+\`\`\`
 [v0] Claude API error: Error [AI_APICallError]: Invalid JSON response
 url: 'https://ccflare.hack.ski/messages',
 responseBody: '<!doctype html>\n<html lang="en">\n<title>better-ccflare Dashboard</title>'
-```
+\`\`\`
 
 **Fix**: Restart frontend without the proxy environment variable:
-```bash
+\`\`\`bash
 env -u ANTHROPIC_BASE_URL pnpm dev
-```
+\`\`\`
 
 **Prevention**: Add environment validation in startup scripts to warn about proxy URLs.
 
@@ -40,17 +40,17 @@ env -u ANTHROPIC_BASE_URL pnpm dev
 ### Bug 2: Missing Database Column
 
 **Symptom**: Story generation completed but final update failed with:
-```
+\`\`\`
 PGRST204: Could not find the 'actual_duration_seconds' column of 'stories' in the schema cache
-```
+\`\`\`
 
 **Root Cause**: Code referenced `actual_duration_seconds` column that didn't exist in the database schema.
 
 **Fix**: Applied migration via Supabase MCP:
-```sql
+\`\`\`sql
 ALTER TABLE public.stories
 ADD COLUMN IF NOT EXISTS actual_duration_seconds INTEGER;
-```
+\`\`\`
 
 **Prevention**: Ensure database migrations are run before deploying code that references new columns.
 
@@ -65,10 +65,10 @@ ADD COLUMN IF NOT EXISTS actual_duration_seconds INTEGER;
 **Location**: `app/story/[id]/page.tsx` (lines 109 and 152)
 
 **Fix**:
-```diff
+\`\`\`diff
 - {story.status === "completed" ? (
 + {story.status === "complete" ? (
-```
+\`\`\`
 
 **Prevention**: Use TypeScript enum types derived from database schema to catch string mismatches at compile time.
 
@@ -104,10 +104,10 @@ Tested with nonexistent repository URL `https://github.com/nonexistent-user-1234
 ## Console Warnings (Non-Critical)
 
 React DOM attribute warnings observed (cosmetic, not blocking):
-```
+\`\`\`
 React does not recognize the `isPlaying` prop on a DOM element.
 React does not recognize the `barCount` prop on a DOM element.
-```
+\`\`\`
 
 **Recommendation**: Update component to use lowercase prop names or filter props before spreading to DOM elements.
 
@@ -115,8 +115,8 @@ React does not recognize the `barCount` prop on a DOM element.
 
 The Code Story platform successfully passes all validation gates. The three bugs discovered during testing have been fixed. The complete story generation pipeline is functional:
 
-```
+\`\`\`
 GitHub URL -> Repository Analysis -> Claude Script Generation -> ElevenLabs TTS -> Supabase Storage -> Audio Playback
-```
+\`\`\`
 
 The platform is ready for production deployment.

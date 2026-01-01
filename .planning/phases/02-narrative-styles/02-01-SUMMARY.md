@@ -49,9 +49,9 @@ All 5 narrative styles have comprehensive, production-quality prompts.
 - Example tone with formal technical language
 
 ### getStoryPrompt Function (lines 212-227)
-```typescript
+\`\`\`typescript
 export function getStoryPrompt(style: string, expertise: string, targetMinutes?: number): string
-```
+\`\`\`
 - Selects style-specific prompt
 - Adds expertise modifier (beginner/intermediate/expert)
 - Combines with STORY_ARCHITECT_PROMPT

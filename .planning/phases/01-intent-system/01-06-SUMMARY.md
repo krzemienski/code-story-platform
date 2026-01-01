@@ -19,7 +19,7 @@ Enhanced story generation to fetch and use intent data for personalized content.
 ### File Modified: `app/api/stories/generate/route.ts`
 
 **Change 1: Intent Data Fetching (lines 106-123)**
-```typescript
+\`\`\`typescript
 // Fetch intent data if available for enhanced personalization
 let intentContext = ""
 if (story.intent_id) {
@@ -38,7 +38,7 @@ INTENT TYPE: ${intent.intent_category || "general"}`
     console.log("[v0] Intent context loaded:", intent.intent_category)
   }
 }
-```
+\`\`\`
 
 **Change 2: Prompt Enhancement (line 319)**
 Added `${intentContext}` to prompt after USER'S INTENT, providing:

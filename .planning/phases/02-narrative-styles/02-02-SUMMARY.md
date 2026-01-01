@@ -25,7 +25,7 @@ Full ElevenLabs integration with style-specific voice settings exists.
 - Chunk size: 10000 chars per API call
 
 **Voice Settings (lines 566-572):**
-```typescript
+\`\`\`typescript
 voice_settings: {
   // Lower stability for more expressive fiction narration
   stability: story.narrative_style === "fiction" ? 0.35 : 0.5,
@@ -34,7 +34,7 @@ voice_settings: {
   // Slight style exaggeration for fiction
   style: story.narrative_style === "fiction" ? 0.15 : 0,
 }
-```
+\`\`\`
 
 **Style-Specific Settings:**
 | Setting | Fiction | Other Styles |

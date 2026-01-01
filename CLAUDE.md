@@ -22,7 +22,7 @@ This file provides guidance to Claude Code when working with the Code Tales plat
 
 ## Project Structure
 
-```
+\`\`\`
 code-story-platform/
 ├── app/                      # Next.js App Router
 │   ├── api/                  # API routes
@@ -52,25 +52,25 @@ code-story-platform/
 │   └── types.ts              # TypeScript types
 ├── scripts/                  # SQL migrations (001-007)
 └── styles/                   # Global CSS
-```
+\`\`\`
 
 ## Quick Commands
 
-```bash
+\`\`\`bash
 pnpm dev          # Start dev server (localhost:3000)
 pnpm build        # Production build
 pnpm lint         # ESLint check
 pnpm start        # Start production server
-```
+\`\`\`
 
 ## Architecture: Multi-Agent Pipeline
 
-```
+\`\`\`
 GitHub URL → Analyzer Agent → Narrator Agent → Synthesizer Agent → Audio
                  │                  │                  │
            Fetch tree &       Generate script    ElevenLabs TTS
            metadata           with Claude        (chunked upload)
-```
+\`\`\`
 
 ### Key Flow (`app/api/stories/generate/route.ts`)
 
@@ -103,7 +103,7 @@ Defined in `lib/agents/prompts.ts`:
 
 ## Environment Variables
 
-```env
+\`\`\`env
 # Required
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
@@ -112,13 +112,13 @@ ELEVENLABS_API_KEY=
 
 # Optional
 GITHUB_TOKEN=              # For private repos
-```
+\`\`\`
 
 ## Code Patterns
 
 ### Supabase Client Selection
 
-```typescript
+\`\`\`typescript
 // Browser components
 import { createClient } from "@/lib/supabase/client"
 
@@ -127,7 +127,7 @@ import { createClient } from "@/lib/supabase/server"
 
 // API routes needing RLS bypass
 import { createServiceClient } from "@/lib/supabase/service"
-```
+\`\`\`
 
 ### Audio Chunking
 

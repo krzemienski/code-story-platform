@@ -28,7 +28,7 @@ All 5 styles are distinctly different and properly integrated throughout the pip
 
 ### End-to-End Style Flow
 
-```
+\`\`\`
 UI Selection (dashboard/new/page.tsx:540)
     ↓ narrativeStyle state
 Story Creation (dashboard/new/page.tsx:339)
@@ -43,7 +43,7 @@ Claude API (route.ts:292)
     ↓ Combined system prompt
 Audio Output
     ↓ Style-appropriate narration
-```
+\`\`\`
 
 ## Phase 02 Completion
 
