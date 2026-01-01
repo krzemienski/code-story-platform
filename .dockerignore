@@ -1,0 +1,50 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
+out
+dist
+build
+
+# Environment files (use build args instead)
+.env
+.env.*
+!.env.example
+
+# Version control
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Testing
+coverage
+.nyc_output
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Backend (separate build)
+backend
+
+# Plans and docs (not needed in container)
+plans
+docs
+*.md
+!README.md
+
+# Misc
+.turbo
+*.log

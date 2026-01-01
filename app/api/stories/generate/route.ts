@@ -1,6 +1,7 @@
 // Story Generation API - Orchestrates the full pipeline with detailed logging
 
 import { generateText } from "ai"
+import { anthropic } from "@ai-sdk/anthropic"
 import { createServiceClient } from "@/lib/supabase/service"
 import { analyzeRepository, summarizeRepoStructure } from "@/lib/agents/github"
 import { getStoryPrompt } from "@/lib/agents/prompts"
@@ -299,7 +300,7 @@ INTENT TYPE: ${intent.intent_category || "general"}`
       console.log("[v0] Generating script with Claude, target words:", targetWords, "maxTokens:", maxTokens)
 
       await log.narrator(storyId, "Writing script with Claude", {
-        model: "anthropic/claude-sonnet-4-20250514",
+        model: anthropic("claude-sonnet-4-20250514"),
         targetWords,
         maxTokens,
         style: story.narrative_style,
@@ -309,7 +310,7 @@ INTENT TYPE: ${intent.intent_category || "general"}`
       try {
         console.log("[v0] Calling Claude API...")
         const result = await generateText({
-          model: "anthropic/claude-sonnet-4-20250514",
+          model: anthropic("claude-sonnet-4-20250514"),
           system: systemPrompt,
           prompt: `Create an audio narrative script for the repository ${repo.repo_owner}/${repo.repo_name}.
 
@@ -382,7 +383,7 @@ BEGIN YOUR ${targetMinutes}-MINUTE ${story.narrative_style.toUpperCase()} NARRAT
 
       // Generate chapter breakdown
       const { text: chaptersJson } = await generateText({
-        model: "anthropic/claude-sonnet-4-20250514",
+        model: anthropic("claude-sonnet-4-20250514"),
         prompt: `Given this narrative script, create a JSON array of chapters with titles and approximate timestamps.
 
 SCRIPT:

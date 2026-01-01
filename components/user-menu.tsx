@@ -22,9 +22,10 @@ export function UserMenu() {
   const [loading, setLoading] = useState(true)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authTab, setAuthTab] = useState<"signin" | "signup">("signin")
-  const supabase = createClient()
 
   useEffect(() => {
+    const supabase = createClient()
+
     const getUser = async () => {
       const {
         data: { user },
@@ -41,9 +42,10 @@ export function UserMenu() {
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase.auth])
+  }, [])
 
   const handleSignOut = async () => {
+    const supabase = createClient()
     await supabase.auth.signOut()
     window.location.href = "/"
   }

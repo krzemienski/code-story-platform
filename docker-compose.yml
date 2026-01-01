@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  # ==========================================================================
+  # FRONTEND - Next.js (Approach A: Monolith)
+  # ==========================================================================
+  # The Next.js app handles all generation via its API routes.
+  # No separate backend needed - all AI/audio calls happen in Next.js.
+  # ==========================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-${SUPABASE_URL}}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-${SUPABASE_ANON_KEY}}
+    container_name: codestory-frontend
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-${SUPABASE_URL}}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-${SUPABASE_ANON_KEY}}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+# ==========================================================================
+# USAGE:
+# ==========================================================================
+# 1. Create .env file with required variables:
+#    NEXT_PUBLIC_SUPABASE_URL=your_url
+#    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+#    SUPABASE_SERVICE_ROLE_KEY=your_service_key
+#    ANTHROPIC_API_KEY=your_anthropic_key
+#    ELEVENLABS_API_KEY=your_elevenlabs_key
+#
+# 2. Build and start:
+#    docker-compose build
+#    docker-compose up
+#
+# 3. Access:
+#    - Frontend: http://localhost:3001
+#
+# 4. View logs:
+#    docker-compose logs -f frontend
+#
+# 5. Stop:
+#    docker-compose down
+# ==========================================================================
