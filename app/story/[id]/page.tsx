@@ -106,7 +106,7 @@ export default async function PublicStoryPage({ params }: PageProps) {
         </div>
 
         {/* Player */}
-        {story.status === "completed" ? (
+        {story.status === "complete" ? (
           <StoryPlayer
             storyId={story.id}
             title={story.title}
@@ -149,7 +149,7 @@ export default async function PublicStoryPage({ params }: PageProps) {
         )}
 
         {/* Script preview */}
-        {story.status === "completed" && story.script_text && (
+        {story.status === "complete" && story.script_text && (
           <div className="mt-8">
             <h2 className="text-lg font-semibold text-white mb-4">Transcript</h2>
             <div className="p-6 rounded-xl bg-zinc-900/50 border border-zinc-800 max-h-96 overflow-y-auto">
