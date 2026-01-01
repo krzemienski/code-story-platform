@@ -372,7 +372,7 @@ export default function NewStoryPage() {
           setGenerationProgress(updatedStory.progress || 0)
           setGenerationMessage(updatedStory.progress_message || "Processing...")
 
-          if (updatedStory.status === "completed" || updatedStory.status === "failed") {
+          if (updatedStory.status === "complete" || updatedStory.status === "failed") {
             clearInterval(pollInterval)
             router.push(`/dashboard/story/${story.id}`)
           }

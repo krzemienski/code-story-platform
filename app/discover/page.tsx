@@ -41,7 +41,7 @@ export default async function DiscoverPage({
       )
     `,
       )
-      .eq("status", "completed")
+      .eq("status", "complete")
       .eq("is_public", true)
 
   // Fetch trending stories (by play count)

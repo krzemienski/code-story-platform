@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS public.stories (
   script_text TEXT,
   audio_url TEXT,
   chapters JSONB DEFAULT '[]',
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'analyzing', 'generating', 'synthesizing', 'completed', 'failed')),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'analyzing', 'generating', 'synthesizing', 'complete', 'failed')),
   progress INTEGER DEFAULT 0,
   progress_message TEXT,
   processing_started_at TIMESTAMP WITH TIME ZONE,

@@ -64,8 +64,10 @@ Transform Code Tales into the full Code Story vision per codestory.md spec.
 | 03-09 | Frontend Migration | Point frontend to Python API | App works with new backend |
 | 03-10 | Deployment | Docker, production config | Deploy succeeds |
 
-**Status**: Not started
-**Validation**: Full pipeline works through Python backend
+**Status**: ✅ COMPLETE
+**Completed**: 2026-01-01
+**Notes**: Full Python backend with Claude Agent SDK implemented. Docker containerization complete. Browser-based validation passed all 5 gates.
+**Validation**: Full pipeline works through Python backend - verified with Playwright E2E testing
 
 ---
 
@@ -110,9 +112,10 @@ Transform Code Tales into the full Code Story vision per codestory.md spec.
 | Milestone | Phases | Plans | Status |
 |-----------|--------|-------|--------|
 | v1.1 Intent | 01-02 | 10 | ✅ COMPLETE |
-| v2.0 Backend | 03-04 | 16 | Not started |
-| v2.1 API | 05 | 6 | Not started |
-| **Total** | **5** | **32** | **31% complete** |
+| v2.0 Backend | 03 | 10 | ✅ COMPLETE |
+| v2.0 Mobile | 04 | 6 | Not started (no plans created) |
+| v2.1 API | 05 | 6 | Not started (no plans created) |
+| **Total** | **5** | **32** | **62.5% complete (20/32)** |
 
 ---
 
@@ -133,15 +136,29 @@ Transform Code Tales into the full Code Story vision per codestory.md spec.
 
 ---
 
+## Milestone v2.0 Backend: ACHIEVED 🎉
+
+**Date**: 2026-01-01
+**Summary**: Python Backend Foundation is production-ready.
+
+### Key Achievements
+- FastAPI backend with Claude Agent SDK fully operational
+- All agents implemented: Intent, RepoAnalyzer, StoryArchitect, VoiceDirector
+- PostgreSQL integration via SQLAlchemy + Alembic migrations
+- Docker containerization with docker-compose.yml
+- Browser-based E2E validation passed all 5 gates
+
+### Bugs Fixed During Validation
+1. ANTHROPIC_BASE_URL proxy misconfiguration
+2. Missing `actual_duration_seconds` column
+3. Story status enum mismatch (`"completed"` vs `"complete"`)
+
+---
+
 ## Next Action
 
-Choose next priority:
-1. **Phase 03**: Python Backend Foundation (major architecture change)
-2. **Phase 04**: Mobile Application (new platform)
-3. **Phase 05**: Public API + Admin (new capabilities)
+**Phase 04 and 05 plans need to be created.** Choose next priority:
+1. **Phase 04**: Mobile Application - Create plans for Expo React Native app
+2. **Phase 05**: Public API + Admin - Create plans for API access and admin dashboard
 
-```
-.planning/phases/03-python-backend/
-.planning/phases/04-mobile-app/
-.planning/phases/05-public-api/
-```
+Use `create-plans` skill to generate the plan files.
