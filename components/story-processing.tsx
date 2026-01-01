@@ -104,7 +104,7 @@ export function StoryProcessing({
         setProgress(data.progress || 0)
         setMessage(data.progress_message || "Processing...")
 
-        if (data.status === "completed" || data.status === "failed") {
+        if (data.status === "complete" || data.status === "failed") {
           clearInterval(interval)
           router.refresh()
         }
@@ -128,7 +128,7 @@ export function StoryProcessing({
           setProgress(newData.progress || 0)
           setMessage(newData.progress_message || "Processing...")
 
-          if (newData.status === "completed" || newData.status === "failed") {
+          if (newData.status === "complete" || newData.status === "failed") {
             clearInterval(interval)
             router.refresh()
           }
