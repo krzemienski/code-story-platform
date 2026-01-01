@@ -103,6 +103,25 @@ export async function POST(req: Request) {
     console.log("[v0] Repository:", story.code_repositories?.repo_owner, "/", story.code_repositories?.repo_name)
     console.log("[v0] Style:", story.narrative_style, "| Duration:", story.target_duration_minutes, "min")
 
+    // Fetch intent data if available for enhanced personalization
+    let intentContext = ""
+    if (story.intent_id) {
+      console.log("[v0] Fetching intent data for story...")
+      const { data: intent, error: intentError } = await supabase
+        .from("story_intents")
+        .select("user_description, focus_areas, intent_category")
+        .eq("id", story.intent_id)
+        .single()
+
+      if (intent && !intentError) {
+        intentContext = `
+USER'S LEARNING GOAL: ${intent.user_description || "General exploration"}
+FOCUS AREAS: ${(intent.focus_areas as string[])?.join(", ") || "All areas"}
+INTENT TYPE: ${intent.intent_category || "general"}`
+        console.log("[v0] Intent context loaded:", intent.intent_category)
+      }
+    }
+
     await log.system(storyId, "Story configuration loaded", {
       title: story.title,
       style: story.narrative_style,
@@ -297,6 +316,7 @@ export async function POST(req: Request) {
 NARRATIVE STYLE: ${story.narrative_style.toUpperCase()}
 TARGET DURATION: ${targetMinutes} minutes (~${targetWords} words)
 USER'S INTENT: ${story.title}
+${intentContext}
 
 REPOSITORY ANALYSIS:
 ${repoSummary}
