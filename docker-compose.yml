@@ -1,0 +1,156 @@
+# Code Story Platform - Full Stack Docker Compose
+# Frontend (Next.js) + Backend (FastAPI) + Redis + Workers
+
+services:
+  # =============================================================================
+  # REDIS - Message Broker for Celery
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: code-story-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - code-story-network
+
+  # =============================================================================
+  # BACKEND - FastAPI API Server
+  # =============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: code-story-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Supabase (External)
+      - SUPABASE_URL=${SUPABASE_URL:-https://dngnmalbjapetqdafhvg.supabase.co}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuZ25tYWxiamFwZXRxZGFmaHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNjk5ODEsImV4cCI6MjA4Mjc0NTk4MX0.qyQhCYF04B0IgEtInvn-owSlk51hDt2ALeXMnSzbimk}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuZ25tYWxiamFwZXRxZGFmaHZnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzE2OTk4MSwiZXhwIjoyMDgyNzQ1OTgxfQ.lTr6T6EI9P0TRxnPiZFnWpHBxGdpDBzyRO0iOodGpws}
+      # AI Services
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-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}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-sk_d5b59392e6824cd1a64c07427a7b687a8e12de25b9f658e3}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-opus-4-5-20251101}
+      - CLAUDE_THINKING_BUDGET=${CLAUDE_THINKING_BUDGET:-10000}
+      # AWS S3 for Audio Storage
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-AKIA6GBMB4YS2UR5BZ2V}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-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}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-code-story-audio}
+      # Redis (Internal Docker network)
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - code-story-network
+    restart: unless-stopped
+
+  # =============================================================================
+  # WORKER - Celery Worker for Background Tasks
+  # =============================================================================
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    environment:
+      # Supabase (External)
+      - SUPABASE_URL=${SUPABASE_URL:-https://dngnmalbjapetqdafhvg.supabase.co}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuZ25tYWxiamFwZXRxZGFmaHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNjk5ODEsImV4cCI6MjA4Mjc0NTk4MX0.qyQhCYF04B0IgEtInvn-owSlk51hDt2ALeXMnSzbimk}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuZ25tYWxiamFwZXRxZGFmaHZnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzE2OTk4MSwiZXhwIjoyMDgyNzQ1OTgxfQ.lTr6T6EI9P0TRxnPiZFnWpHBxGdpDBzyRO0iOodGpws}
+      # AI Services
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-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}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-sk_d5b59392e6824cd1a64c07427a7b687a8e12de25b9f658e3}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-opus-4-5-20251101}
+      - CLAUDE_THINKING_BUDGET=${CLAUDE_THINKING_BUDGET:-10000}
+      # AWS S3 for Audio Storage
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-AKIA6GBMB4YS2UR5BZ2V}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-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}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-code-story-audio}
+      # Redis (Internal Docker network)
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - code-story-network
+    restart: unless-stopped
+
+  # =============================================================================
+  # FRONTEND - Next.js Web Application
+  # =============================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        # Build-time environment variables (baked into client bundle)
+        # Use env vars if set, otherwise use defaults from docker.env.txt
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-https://dngnmalbjapetqdafhvg.supabase.co}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuZ25tYWxiamFwZXRxZGFmaHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNjk5ODEsImV4cCI6MjA4Mjc0NTk4MX0.qyQhCYF04B0IgEtInvn-owSlk51hDt2ALeXMnSzbimk}
+        # Point to backend container (internal Docker network)
+        - NEXT_PUBLIC_API_URL=http://backend:8000
+    container_name: code-story-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # Runtime environment variables
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-https://dngnmalbjapetqdafhvg.supabase.co}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuZ25tYWxiamFwZXRxZGFmaHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNjk5ODEsImV4cCI6MjA4Mjc0NTk4MX0.qyQhCYF04B0IgEtInvn-owSlk51hDt2ALeXMnSzbimk}
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+      # Server-side Supabase (for API routes)
+      - SUPABASE_URL=${SUPABASE_URL:-https://dngnmalbjapetqdafhvg.supabase.co}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuZ25tYWxiamFwZXRxZGFmaHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNjk5ODEsImV4cCI6MjA4Mjc0NTk4MX0.qyQhCYF04B0IgEtInvn-owSlk51hDt2ALeXMnSzbimk}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuZ25tYWxiamFwZXRxZGFmaHZnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzE2OTk4MSwiZXhwIjoyMDgyNzQ1OTgxfQ.lTr6T6EI9P0TRxnPiZFnWpHBxGdpDBzyRO0iOodGpws}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - code-story-network
+    restart: unless-stopped
+
+  # =============================================================================
+  # FLOWER - Celery Monitoring (Optional)
+  # =============================================================================
+  flower:
+    image: mher/flower:2.0
+    container_name: code-story-flower
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=5555
+    depends_on:
+      - redis
+    networks:
+      - code-story-network
+    profiles:
+      - monitoring
+
+# =============================================================================
+# NETWORKS & VOLUMES
+# =============================================================================
+networks:
+  code-story-network:
+    driver: bridge
+
+volumes:
+  redis_data:
