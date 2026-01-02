@@ -30,7 +30,7 @@ async function getPublicTales() {
         description
       )
     `)
-    .eq("status", "complete")
+    .eq("status", "completed")
     .eq("is_public", true)
     .order("play_count", { ascending: false, nullsFirst: false })
     .limit(12)
@@ -53,10 +53,11 @@ async function getFeaturedTales() {
         repo_name,
         repo_owner,
         primary_language,
+        stars_count,
         description
       )
     `)
-    .eq("status", "complete")
+    .eq("status", "completed")
     .eq("is_public", true)
     .order("play_count", { ascending: false, nullsFirst: false })
     .limit(5)

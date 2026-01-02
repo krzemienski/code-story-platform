@@ -1,7 +1,7 @@
 export type SubscriptionTier = "free" | "pro" | "team"
 export type ExpertiseLevel = "beginner" | "intermediate" | "expert"
 export type NarrativeStyle = "fiction" | "documentary" | "tutorial" | "podcast" | "technical"
-export type StoryStatus = "pending" | "analyzing" | "generating" | "synthesizing" | "complete" | "failed"
+export type StoryStatus = "pending" | "analyzing" | "generating" | "synthesizing" | "completed" | "failed"
 export type IntentCategory =
   | "architecture_understanding"
   | "onboarding_deep_dive"

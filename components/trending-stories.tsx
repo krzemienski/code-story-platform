@@ -45,7 +45,7 @@ export function TrendingStories() {
             primary_language
           )
         `)
-        .eq("status", "complete")
+        .eq("status", "completed")
         .eq("is_public", true)
 
       if (activeTab === "trending") {

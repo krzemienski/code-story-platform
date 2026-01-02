@@ -31,7 +31,7 @@ function getStatusBadge(status: string) {
     analyzing: { label: "Analyzing", className: "bg-blue-500/10 text-blue-500" },
     generating: { label: "Generating", className: "bg-yellow-500/10 text-yellow-500" },
     synthesizing: { label: "Synthesizing", className: "bg-purple-500/10 text-purple-500" },
-    complete: { label: "Completed", className: "bg-emerald-500/10 text-emerald-500" },
+    completed: { label: "Completed", className: "bg-emerald-500/10 text-emerald-500" },
     failed: { label: "Failed", className: "bg-red-500/10 text-red-500" },
   }
   const config = statusConfig[status] || statusConfig.pending
@@ -72,7 +72,7 @@ export default async function DashboardPage() {
         stars_count
       )
     `)
-    .eq("status", "complete")
+    .eq("status", "completed")
     .eq("is_public", true)
     .neq("user_id", user.id)
     .order("play_count", { ascending: false, nullsFirst: false })
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
 
   const continueListening = userStories?.find(
     (s: any) =>
-      s.status === "complete" &&
+      s.status === "completed" &&
       s.last_played_position > 0 &&
       s.last_played_position < (s.actual_duration_seconds || 0),
   )
@@ -188,7 +188,7 @@ export default async function DashboardPage() {
                         <span>{formatDate(story.created_at)}</span>
                       </div>
 
-                      {story.status !== "complete" && story.status !== "failed" && (
+                      {story.status !== "completed" && story.status !== "failed" && (
                         <div className="mt-3">
                           <Progress value={story.progress} className="h-1" />
                           <p className="mt-1 text-xs text-muted-foreground">
@@ -199,7 +199,7 @@ export default async function DashboardPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {story.status === "complete" && (
+                      {story.status === "completed" && (
                         <>
                           <AudioPlayer audioUrl={story.audio_url} />
                           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
@@ -217,7 +217,7 @@ export default async function DashboardPage() {
                           <DropdownMenuItem asChild>
                             <Link href={`/story/${story.id}`}>View Details</Link>
                           </DropdownMenuItem>
-                          {story.status === "complete" && <DropdownMenuItem>Regenerate</DropdownMenuItem>}
+                          {story.status === "completed" && <DropdownMenuItem>Regenerate</DropdownMenuItem>}
                           <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

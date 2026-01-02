@@ -177,7 +177,7 @@ export function StoryGenerator() {
         setProgress(data.progress || 0)
         setProgressMessage(data.progress_message || "Processing...")
 
-        if (data.status === "complete") {
+        if (data.status === "completed") {
           clearInterval(interval)
           setIsComplete(true)
           setAudioUrl(data.audio_chunks?.[0] || data.audio_url)
