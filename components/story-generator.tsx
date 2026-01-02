@@ -13,6 +13,8 @@ import { Orb } from "@/components/ui/orb"
 import { Waveform } from "@/components/ui/waveform"
 import { ProcessingLogs } from "@/components/processing-logs"
 import { createClient } from "@/lib/supabase/client"
+import { GenerationConfigPanel, useGenerationConfig } from "@/components/generation-config"
+import { AI_MODELS, recommendModel } from "@/lib/ai/models"
 
 type GeneratorStep = "input" | "options" | "generating" | "complete"
 
@@ -60,12 +62,31 @@ export function StoryGenerator() {
   const [voice, setVoice] = useState("21m00Tcm4TlvDq8ikWAM")
   const [showAdvanced, setShowAdvanced] = useState(false)
 
+  const [generationConfig, setGenerationConfig] = useGenerationConfig()
+
   // Generation state
   const [storyId, setStoryId] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const [progressMessage, setProgressMessage] = useState("")
   const [isComplete, setIsComplete] = useState(false)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
+
+  const { autoSelectModel, priority, modelId } = generationConfig
+
+  useEffect(() => {
+    if (autoSelectModel) {
+      const durationMinutes = DURATIONS.find((d) => d.id === duration)?.minutes || 10
+      const recommended = recommendModel({
+        narrativeStyle: style,
+        expertiseLevel: "intermediate",
+        targetDurationMinutes: durationMinutes,
+        prioritize: priority,
+      })
+      if (recommended.id !== modelId) {
+        setGenerationConfig((prev) => ({ ...prev, modelId: recommended.id }))
+      }
+    }
+  }, [style, duration, autoSelectModel, priority, modelId, setGenerationConfig])
 
   const validateRepo = async () => {
     if (!url.trim()) return
@@ -137,9 +158,14 @@ export function StoryGenerator() {
           target_duration_minutes: durationMinutes,
           expertise_level: "intermediate",
           status: "pending",
-          is_public: true, // Public by default for free users
+          is_public: true,
           progress: 0,
           progress_message: "Queued...",
+          model_config: {
+            modelId: generationConfig.modelId,
+            temperature: generationConfig.temperature,
+            priority: generationConfig.priority,
+          },
         })
         .select()
         .single()
@@ -148,11 +174,16 @@ export function StoryGenerator() {
 
       setStoryId(story.id)
 
-      // Trigger generation
       fetch("/api/stories/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storyId: story.id }),
+        body: JSON.stringify({
+          storyId: story.id,
+          modelConfig: {
+            modelId: generationConfig.modelId,
+            temperature: generationConfig.temperature,
+          },
+        }),
       })
     } catch (err: any) {
       console.error("[v0] Generation error:", err)
@@ -304,6 +335,23 @@ export function StoryGenerator() {
             </div>
           </div>
 
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm font-medium block">AI Model</label>
+              <p className="text-xs text-muted-foreground">
+                {autoSelectModel
+                  ? `Auto: ${AI_MODELS[modelId]?.displayName || "Claude Sonnet 4"}`
+                  : AI_MODELS[modelId]?.displayName || "Claude Sonnet 4"}
+              </p>
+            </div>
+            <GenerationConfigPanel
+              config={generationConfig}
+              onChange={setGenerationConfig}
+              narrativeStyle={style}
+              targetDurationMinutes={DURATIONS.find((d) => d.id === duration)?.minutes || 10}
+            />
+          </div>
+
           {/* Advanced options toggle */}
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
@@ -343,13 +391,13 @@ export function StoryGenerator() {
             </Button>
             <Button onClick={startGeneration} className="flex-1">
               <Sparkles className="mr-2 h-4 w-4" />
-              Generate Story
+              Generate Tale
             </Button>
           </div>
 
           {/* Note about public */}
           <p className="text-xs text-muted-foreground text-center">
-            Stories are public by default. Self-host for private generations.
+            Tales are public by default. Self-host for private generations.
           </p>
         </div>
       )}
@@ -420,7 +468,7 @@ export function StoryGenerator() {
           <div className="h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
             <Volume2 className="h-8 w-8 text-green-500" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">Your story is ready!</h3>
+          <h3 className="text-xl font-semibold mb-2">Your tale is ready!</h3>
           <p className="text-muted-foreground mb-6">{repoInfo?.name} has been transformed into an audio narrative.</p>
           <div className="flex gap-3 justify-center">
             <Button onClick={() => router.push(`/story/${storyId}`)}>

@@ -1,16 +1,20 @@
 // Story Generation API - Orchestrates the full pipeline with detailed logging
 
 import { generateText } from "ai"
-import { anthropic } from "@ai-sdk/anthropic"
 import { createServiceClient } from "@/lib/supabase/service"
 import { analyzeRepository, summarizeRepoStructure } from "@/lib/agents/github"
 import { getStoryPrompt } from "@/lib/agents/prompts"
 import { log } from "@/lib/agents/log-helper"
+import { AI_MODELS, getModelConfiguration, getPromptOptimizations, recommendModel } from "@/lib/ai/models"
 
 export const maxDuration = 300 // 5 minutes max (Vercel limit)
 
 interface GenerateRequest {
   storyId: string
+  modelConfig?: {
+    modelId?: string
+    temperature?: number
+  }
 }
 
 function splitTextIntoChunks(text: string, maxChars = 4000): string[] {
@@ -63,10 +67,11 @@ export async function POST(req: Request) {
   const TIMEOUT_WARNING_MS = 240000 // 4 minutes - warn before Vercel cuts us off
 
   try {
-    const { storyId }: GenerateRequest = await req.json()
+    const { storyId, modelConfig }: GenerateRequest = await req.json()
 
-    console.log("[v0] ====== STORY GENERATION STARTED ======")
-    console.log("[v0] Story ID:", storyId)
+    console.log("[v0] ====== TALE GENERATION STARTED ======")
+    console.log("[v0] Tale ID:", storyId)
+    console.log("[v0] Model Config:", modelConfig)
     console.log("[v0] Timestamp:", new Date().toISOString())
 
     let supabase
@@ -79,15 +84,14 @@ export async function POST(req: Request) {
     }
 
     try {
-      await log.system(storyId, "Story generation initiated", { storyId, timestamp: new Date().toISOString() })
+      await log.system(storyId, "Tale generation initiated", { storyId, timestamp: new Date().toISOString() })
       console.log("[v0] Initial log written successfully")
     } catch (logError) {
       console.error("[v0] Warning: Log writing failed:", logError)
-      // Continue anyway
     }
 
-    // Fetch story details
-    console.log("[v0] Fetching story details...")
+    // Fetch tale details
+    console.log("[v0] Fetching tale details...")
     const { data: story, error: storyError } = await supabase
       .from("stories")
       .select("*, code_repositories(*)")
@@ -95,19 +99,43 @@ export async function POST(req: Request) {
       .single()
 
     if (storyError || !story) {
-      console.error("[v0] Story not found:", storyError)
-      await log.system(storyId, "Story not found", { error: storyError?.message }, "error")
-      return Response.json({ error: "Story not found" }, { status: 404 })
+      console.error("[v0] Tale not found:", storyError)
+      await log.system(storyId, "Tale not found", { error: storyError?.message }, "error")
+      return Response.json({ error: "Tale not found" }, { status: 404 })
     }
 
-    console.log("[v0] Story loaded:", story.title)
-    console.log("[v0] Repository:", story.code_repositories?.repo_owner, "/", story.code_repositories?.repo_name)
-    console.log("[v0] Style:", story.narrative_style, "| Duration:", story.target_duration_minutes, "min")
+    const targetMinutes = story.target_duration_minutes || 15
+    let selectedModelId = modelConfig?.modelId || story.model_config?.modelId
+
+    // If no model specified, auto-recommend based on content
+    if (!selectedModelId || !AI_MODELS[selectedModelId]?.isAvailable) {
+      const recommended = recommendModel({
+        narrativeStyle: story.narrative_style,
+        expertiseLevel: story.expertise_level || "intermediate",
+        targetDurationMinutes: targetMinutes,
+        prioritize: story.model_config?.priority || "quality",
+      })
+      selectedModelId = recommended.id
+      console.log("[v0] Auto-selected model:", selectedModelId)
+    }
+
+    const modelDef = AI_MODELS[selectedModelId]
+    const modelConfigData = getModelConfiguration(selectedModelId, story.narrative_style, targetMinutes)
+    const promptOptimizations = getPromptOptimizations(selectedModelId)
+
+    // Override temperature if specified
+    if (modelConfig?.temperature !== undefined) {
+      modelConfigData.temperature = modelConfig.temperature
+    }
+
+    console.log("[v0] Tale loaded:", story.title)
+    console.log("[v0] Using model:", modelDef.displayName, "(", selectedModelId, ")")
+    console.log("[v0] Model config:", modelConfigData)
 
     // Fetch intent data if available for enhanced personalization
     let intentContext = ""
     if (story.intent_id) {
-      console.log("[v0] Fetching intent data for story...")
+      console.log("[v0] Fetching intent data for tale...")
       const { data: intent, error: intentError } = await supabase
         .from("story_intents")
         .select("user_description, focus_areas, intent_category")
@@ -123,10 +151,11 @@ INTENT TYPE: ${intent.intent_category || "general"}`
       }
     }
 
-    await log.system(storyId, "Story configuration loaded", {
+    await log.system(storyId, "Tale configuration loaded", {
       title: story.title,
       style: story.narrative_style,
       duration: story.target_duration_minutes,
+      model: selectedModelId,
     })
 
     try {
@@ -142,7 +171,7 @@ INTENT TYPE: ${intent.intent_category || "general"}`
         .eq("id", storyId)
 
       if (updateError) {
-        console.error("[v0] Failed to update story status:", updateError)
+        console.error("[v0] Failed to update tale status:", updateError)
       }
 
       const repo = story.code_repositories
@@ -197,26 +226,6 @@ INTENT TYPE: ${intent.intent_category || "general"}`
         },
         "success",
       )
-
-      await supabase
-        .from("stories")
-        .update({
-          progress: 20,
-          progress_message: "Analyzing project configuration...",
-        })
-        .eq("id", storyId)
-
-      const projectType = analysis.packageJson ? (analysis.packageJson.type as string) || "node" : "unknown"
-
-      await log.analyzer(storyId, "Analyzing project configuration", {
-        projectType,
-        hasConfig: !!analysis.packageJson,
-        dependencyCount:
-          projectType === "node"
-            ? Object.keys((analysis.packageJson as { dependencies?: Record<string, string> })?.dependencies || {})
-                .length
-            : 0,
-      })
 
       const repoSummary = summarizeRepoStructure(analysis)
       console.log("[v0] Repo analysis complete, summary length:", repoSummary.length)
@@ -280,37 +289,50 @@ INTENT TYPE: ${intent.intent_category || "general"}`
         .from("stories")
         .update({
           progress: 50,
-          progress_message: "Generating narrative outline...",
+          progress_message: `Generating narrative with ${modelDef.displayName}...`,
         })
         .eq("id", storyId)
 
       await log.narrator(storyId, "Generating narrative outline", {
         style: story.narrative_style,
         targetMinutes: story.target_duration_minutes,
+        model: modelDef.displayName,
       })
 
-      const systemPrompt = getStoryPrompt(story.narrative_style, story.expertise_level || "intermediate")
-      const targetMinutes = story.target_duration_minutes || 15
+      const baseSystemPrompt = getStoryPrompt(story.narrative_style, story.expertise_level || "intermediate")
+      const systemPrompt = [
+        promptOptimizations.systemPromptPrefix,
+        baseSystemPrompt,
+        promptOptimizations.specialInstructions,
+        promptOptimizations.systemPromptSuffix,
+      ]
+        .filter(Boolean)
+        .join("\n\n")
+
       const targetWords = targetMinutes * 150
 
-      // Calculate tokens needed: roughly 0.75 words per token, plus buffer
-      const estimatedTokensNeeded = Math.ceil(targetWords / 0.75) + 2000
-      const maxTokens = Math.min(estimatedTokensNeeded, 64000) // Cap at 64k for Claude
-
-      console.log("[v0] Generating script with Claude, target words:", targetWords, "maxTokens:", maxTokens)
-
-      await log.narrator(storyId, "Writing script with Claude", {
-        model: anthropic("claude-sonnet-4-20250514"),
+      console.log(
+        "[v0] Generating script with",
+        modelDef.displayName,
+        ", target words:",
         targetWords,
-        maxTokens,
+        "maxTokens:",
+        modelConfigData.maxTokens,
+      )
+
+      await log.narrator(storyId, `Writing script with ${modelDef.displayName}`, {
+        model: selectedModelId,
+        targetWords,
+        maxTokens: modelConfigData.maxTokens,
+        temperature: modelConfigData.temperature,
         style: story.narrative_style,
       })
 
       let script: string
       try {
-        console.log("[v0] Calling Claude API...")
+        console.log("[v0] Calling AI API with model:", selectedModelId)
         const result = await generateText({
-          model: anthropic("claude-sonnet-4-20250514"),
+          model: selectedModelId, // AI Gateway handles routing
           system: systemPrompt,
           prompt: `Create an audio narrative script for the repository ${repo.repo_owner}/${repo.repo_name}.
 
@@ -336,25 +358,43 @@ CRITICAL INSTRUCTIONS:
 8. Make it engaging enough that someone would want to listen for the full ${targetMinutes} minutes
 
 BEGIN YOUR ${targetMinutes}-MINUTE ${story.narrative_style.toUpperCase()} NARRATIVE NOW:`,
-          maxTokens,
-          temperature: 0.8, // Slightly higher for more creative output
+          maxTokens: modelConfigData.maxTokens,
+          temperature: modelConfigData.temperature,
+          topP: modelConfigData.topP,
+          frequencyPenalty: modelConfigData.frequencyPenalty,
+          presencePenalty: modelConfigData.presencePenalty,
         })
         script = result.text
-        console.log("[v0] Claude API call successful, generated", script.split(/\s+/).length, "words")
-      } catch (claudeError) {
-        console.error("[v0] Claude API error:", claudeError)
-        await log.narrator(storyId, "Claude API failed", { error: String(claudeError) }, "error")
+        console.log("[v0] AI API call successful, generated", script.split(/\s+/).length, "words")
+
+        if (result.usage) {
+          console.log("[v0] Token usage:", result.usage)
+          await log.narrator(
+            storyId,
+            "Generation complete",
+            {
+              model: selectedModelId,
+              promptTokens: result.usage.promptTokens,
+              completionTokens: result.usage.completionTokens,
+              totalTokens: result.usage.totalTokens,
+            },
+            "success",
+          )
+        }
+      } catch (aiError) {
+        console.error("[v0] AI API error:", aiError)
+        await log.narrator(storyId, `${modelDef.displayName} API failed`, { error: String(aiError) }, "error")
 
         await supabase
           .from("stories")
           .update({
             status: "failed",
-            error_message: `Claude API error: ${claudeError instanceof Error ? claudeError.message : String(claudeError)}`,
+            error_message: `AI API error (${modelDef.displayName}): ${aiError instanceof Error ? aiError.message : String(aiError)}`,
             processing_completed_at: new Date().toISOString(),
           })
           .eq("id", storyId)
 
-        return Response.json({ error: "Claude API failed", details: String(claudeError) }, { status: 500 })
+        return Response.json({ error: "AI API failed", details: String(aiError) }, { status: 500 })
       }
 
       const actualWords = script.split(/\s+/).length
@@ -366,6 +406,7 @@ BEGIN YOUR ${targetMinutes}-MINUTE ${story.narrative_style.toUpperCase()} NARRAT
         {
           words: actualWords,
           estimatedMinutes: Math.round(actualWords / 150),
+          model: modelDef.displayName,
         },
         "success",
       )
@@ -381,9 +422,9 @@ BEGIN YOUR ${targetMinutes}-MINUTE ${story.narrative_style.toUpperCase()} NARRAT
 
       await log.narrator(storyId, "Generating chapter breakdown", {})
 
-      // Generate chapter breakdown
+      const chapterModelId = "openai/gpt-4o-mini" // Fast and cheap for structured output
       const { text: chaptersJson } = await generateText({
-        model: anthropic("claude-sonnet-4-20250514"),
+        model: chapterModelId,
         prompt: `Given this narrative script, create a JSON array of chapters with titles and approximate timestamps.
 
 SCRIPT:
@@ -398,6 +439,7 @@ Output a JSON array like this (estimate timestamps based on ~150 words per minut
 
 Output ONLY valid JSON, no other text:`,
         maxTokens: 1000,
+        temperature: 0.3,
       })
 
       let chapters = []
