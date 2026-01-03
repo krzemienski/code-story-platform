@@ -11,9 +11,9 @@ This document analyzes the current tale generation pipeline and proposes a dual-
 ## Current State Analysis
 
 ### Current Pipeline (Hybrid Approach)
-```
+\`\`\`
 User Input → Claude/GPT (Script) → ElevenLabs TTS API (Voice) → Audio Output
-```
+\`\`\`
 
 **Components:**
 - **Script Generation**: Claude Sonnet / GPT-4o via Vercel AI Gateway
@@ -52,9 +52,9 @@ User Input → Claude/GPT (Script) → ElevenLabs TTS API (Voice) → Audio Outp
 
 ### Mode 1: Unified ElevenLabs (Full Studio Pipeline)
 
-```
+\`\`\`
 User Input → ElevenLabs GenFM/Studio → Full Audio Production
-```
+\`\`\`
 
 **Best For:**
 - Podcast-style tales (conversational host + guest)
@@ -63,7 +63,7 @@ User Input → ElevenLabs GenFM/Studio → Full Audio Production
 - Multi-character narratives
 
 **Configuration:**
-```typescript
+\`\`\`typescript
 {
   mode: "elevenlabs_studio",
   format: "podcast" | "audiobook" | "documentary",
@@ -73,13 +73,13 @@ User Input → ElevenLabs GenFM/Studio → Full Audio Production
   duration: "short" | "default" | "long",
   focusAreas: string[] // Up to 3
 }
-```
+\`\`\`
 
 ### Mode 2: Hybrid Claude + ElevenLabs
 
-```
+\`\`\`
 User Input → Claude/GPT (Script) → ElevenLabs TTS → Audio
-```
+\`\`\`
 
 **Best For:**
 - Fiction narratives with complex storytelling
@@ -88,7 +88,7 @@ User Input → Claude/GPT (Script) → ElevenLabs TTS → Audio
 - Content requiring custom prompt engineering
 
 **Configuration:**
-```typescript
+\`\`\`typescript
 {
   mode: "claude_hybrid",
   scriptModel: "anthropic/claude-sonnet-4" | "openai/gpt-4o",
@@ -96,7 +96,7 @@ User Input → Claude/GPT (Script) → ElevenLabs TTS → Audio
   narrativeStyle: "fiction" | "documentary" | "tutorial" | "technical",
   voiceSettings: VoiceSettings
 }
-```
+\`\`\`
 
 ---
 
@@ -165,7 +165,7 @@ User Input → Claude/GPT (Script) → ElevenLabs TTS → Audio
 
 ## Database Schema Updates
 
-```sql
+\`\`\`sql
 -- Add generation mode column
 ALTER TABLE stories ADD COLUMN IF NOT EXISTS generation_mode TEXT DEFAULT 'hybrid';
 ALTER TABLE stories ADD COLUMN IF NOT EXISTS elevenlabs_project_id TEXT;
