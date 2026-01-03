@@ -14,7 +14,9 @@ import { Waveform } from "@/components/ui/waveform"
 import { ProcessingLogs } from "@/components/processing-logs"
 import { createClient } from "@/lib/supabase/client"
 import { GenerationConfigPanel, useGenerationConfig } from "@/components/generation-config"
+import { GenerationModeSelector } from "@/components/generation-mode-selector"
 import { AI_MODELS, recommendModel } from "@/lib/ai/models"
+import type { GenerationMode, GenerationModeConfig } from "@/lib/generation/modes"
 
 type GeneratorStep = "input" | "options" | "generating" | "complete"
 
@@ -62,31 +64,38 @@ export function StoryGenerator() {
   const [voice, setVoice] = useState("21m00Tcm4TlvDq8ikWAM")
   const [showAdvanced, setShowAdvanced] = useState(false)
 
+  const [generationMode, setGenerationMode] = useState<GenerationMode>("hybrid")
+  const [modeConfig, setModeConfig] = useState<GenerationModeConfig>({
+    mode: "hybrid",
+    scriptModel: "claude-sonnet-4",
+    voiceSynthesis: "elevenlabs-tts",
+    enableSoundEffects: false,
+    enableBackgroundMusic: false,
+  })
+
   const [generationConfig, setGenerationConfig] = useGenerationConfig()
 
-  // Generation state
-  const [storyId, setStoryId] = useState<string | null>(null)
-  const [progress, setProgress] = useState(0)
-  const [progressMessage, setProgressMessage] = useState("")
-  const [isComplete, setIsComplete] = useState(false)
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
-
-  const { autoSelectModel, priority, modelId } = generationConfig
-
   useEffect(() => {
-    if (autoSelectModel) {
+    if (generationConfig.autoSelectModel) {
       const durationMinutes = DURATIONS.find((d) => d.id === duration)?.minutes || 10
       const recommended = recommendModel({
         narrativeStyle: style,
         expertiseLevel: "intermediate",
         targetDurationMinutes: durationMinutes,
-        prioritize: priority,
+        prioritize: generationConfig.priority,
       })
-      if (recommended.id !== modelId) {
+      if (recommended.id !== generationConfig.modelId) {
         setGenerationConfig((prev) => ({ ...prev, modelId: recommended.id }))
       }
     }
-  }, [style, duration, autoSelectModel, priority, modelId, setGenerationConfig])
+  }, [
+    style,
+    duration,
+    generationConfig.autoSelectModel,
+    generationConfig.priority,
+    generationConfig.modelId,
+    setGenerationConfig,
+  ])
 
   const validateRepo = async () => {
     if (!url.trim()) return
@@ -131,7 +140,7 @@ export function StoryGenerator() {
       const supabase = createClient()
       const durationMinutes = DURATIONS.find((d) => d.id === duration)?.minutes || 10
 
-      // Create repository record (no user required for public stories)
+      // Create repository record (no user required for public tales)
       const { data: repo, error: repoError } = await supabase
         .from("code_repositories")
         .insert({
@@ -147,7 +156,6 @@ export function StoryGenerator() {
 
       if (repoError) throw repoError
 
-      // Create story record
       const { data: story, error: storyError } = await supabase
         .from("stories")
         .insert({
@@ -161,10 +169,14 @@ export function StoryGenerator() {
           is_public: true,
           progress: 0,
           progress_message: "Queued...",
-          model_config: {
-            modelId: generationConfig.modelId,
-            temperature: generationConfig.temperature,
-            priority: generationConfig.priority,
+          generation_mode: generationMode,
+          generation_config: {
+            ...modeConfig,
+            modelConfig: {
+              modelId: generationConfig.modelId,
+              temperature: generationConfig.temperature,
+              priority: generationConfig.priority,
+            },
           },
         })
         .select()
@@ -179,6 +191,8 @@ export function StoryGenerator() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           storyId: story.id,
+          generationMode,
+          modeConfig,
           modelConfig: {
             modelId: generationConfig.modelId,
             temperature: generationConfig.temperature,
@@ -192,7 +206,13 @@ export function StoryGenerator() {
     }
   }
 
-  // Poll for progress
+  // Generation state
+  const [storyId, setStoryId] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
+  const [progressMessage, setProgressMessage] = useState("")
+  const [isComplete, setIsComplete] = useState(false)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+
   useEffect(() => {
     if (!storyId || step !== "generating") return
 
@@ -296,6 +316,14 @@ export function StoryGenerator() {
             </div>
           </div>
 
+          <GenerationModeSelector
+            mode={generationMode}
+            config={modeConfig}
+            onModeChange={setGenerationMode}
+            onConfigChange={setModeConfig}
+            narrativeStyle={style}
+          />
+
           {/* Style selection */}
           <div>
             <label className="text-sm font-medium mb-3 block">Narrative Style</label>
@@ -339,9 +367,9 @@ export function StoryGenerator() {
             <div>
               <label className="text-sm font-medium block">AI Model</label>
               <p className="text-xs text-muted-foreground">
-                {autoSelectModel
-                  ? `Auto: ${AI_MODELS[modelId]?.displayName || "Claude Sonnet 4"}`
-                  : AI_MODELS[modelId]?.displayName || "Claude Sonnet 4"}
+                {generationConfig.autoSelectModel
+                  ? `Auto: ${AI_MODELS[generationConfig.modelId]?.displayName || "Claude Sonnet 4"}`
+                  : AI_MODELS[generationConfig.modelId]?.displayName || "Claude Sonnet 4"}
               </p>
             </div>
             <GenerationConfigPanel
@@ -397,7 +425,7 @@ export function StoryGenerator() {
 
           {/* Note about public */}
           <p className="text-xs text-muted-foreground text-center">
-            Tales are public by default. Self-host for private generations.
+            Tales are public by default so others can discover and listen.
           </p>
         </div>
       )}
