@@ -106,7 +106,7 @@ export default async function PublicStoryPage({ params }: PageProps) {
         </div>
 
         {/* Player */}
-        {story.status === "complete" ? (
+        {story.status === "completed" ? (
           <StoryPlayer
             storyId={story.id}
             title={story.title}
@@ -116,7 +116,10 @@ export default async function PublicStoryPage({ params }: PageProps) {
             chapters={story.story_chapters || []}
             scriptText={story.script_text}
           />
-        ) : story.status === "processing" || story.status === "pending" || story.status === "generating" ? (
+        ) : story.status === "synthesizing" ||
+          story.status === "analyzing" ||
+          story.status === "pending" ||
+          story.status === "generating" ? (
           <div className="text-center py-16 rounded-xl bg-zinc-900/50 border border-zinc-800">
             <div className="flex justify-center gap-1 mb-4">
               {[...Array(5)].map((_, i) => (
@@ -149,7 +152,7 @@ export default async function PublicStoryPage({ params }: PageProps) {
         )}
 
         {/* Script preview */}
-        {story.status === "complete" && story.script_text && (
+        {story.status === "completed" && story.script_text && (
           <div className="mt-8">
             <h2 className="text-lg font-semibold text-white mb-4">Transcript</h2>
             <div className="p-6 rounded-xl bg-zinc-900/50 border border-zinc-800 max-h-96 overflow-y-auto">

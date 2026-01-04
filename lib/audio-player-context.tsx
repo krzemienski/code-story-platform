@@ -65,6 +65,19 @@ export function useAudioPlayerContext() {
   return context
 }
 
+function isSafari(): boolean {
+  if (typeof window === "undefined") return false
+  const ua = navigator.userAgent.toLowerCase()
+  return ua.includes("safari") && !ua.includes("chrome") && !ua.includes("android")
+}
+
+function isIOS(): boolean {
+  if (typeof window === "undefined") return false
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  )
+}
+
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -88,43 +101,49 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
   // Chunk handling
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0)
-  const [chunkDurations, setChunkDurations] = useState<number[]>([])
 
-  // Initialize audio element
-  useEffect(() => {
-    if (typeof window !== "undefined" && !audioRef.current) {
-      audioRef.current = new Audio()
-      audioRef.current.preload = "metadata"
+  const updateMediaSession = useCallback((item: QueueItem | null) => {
+    if (typeof window === "undefined" || !("mediaSession" in navigator) || !item) return
 
-      audioRef.current.addEventListener("timeupdate", () => {
-        if (audioRef.current) {
-          setCurrentTime(audioRef.current.currentTime)
-        }
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: item.title,
+        artist: item.repoName || "Code Tales",
+        album: "Code Tales",
+        artwork: [
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+        ],
       })
-
-      audioRef.current.addEventListener("loadedmetadata", () => {
-        if (audioRef.current) {
-          setDuration(audioRef.current.duration)
-          setIsBuffering(false)
-        }
-      })
-
-      audioRef.current.addEventListener("ended", () => {
-        // Handle chunk or track ending
-        handleTrackEnded()
-      })
-
-      audioRef.current.addEventListener("waiting", () => setIsBuffering(true))
-      audioRef.current.addEventListener("canplay", () => setIsBuffering(false))
-      audioRef.current.addEventListener("play", () => setIsPlaying(true))
-      audioRef.current.addEventListener("pause", () => setIsPlaying(false))
+    } catch (e) {
+      console.log("[v0] MediaSession metadata not supported")
     }
+  }, [])
 
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current.src = ""
-      }
+  const setupMediaSessionHandlers = useCallback(() => {
+    if (typeof window === "undefined" || !("mediaSession" in navigator)) return
+
+    try {
+      navigator.mediaSession.setActionHandler("play", () => {
+        audioRef.current?.play()
+      })
+      navigator.mediaSession.setActionHandler("pause", () => {
+        audioRef.current?.pause()
+      })
+      navigator.mediaSession.setActionHandler("seekbackward", () => {
+        if (audioRef.current) {
+          audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15)
+        }
+      })
+      navigator.mediaSession.setActionHandler("seekforward", () => {
+        if (audioRef.current) {
+          audioRef.current.currentTime = Math.min(audioRef.current.duration || 0, audioRef.current.currentTime + 15)
+        }
+      })
+      navigator.mediaSession.setActionHandler("previoustrack", null)
+      navigator.mediaSession.setActionHandler("nexttrack", null)
+    } catch (e) {
+      console.log("[v0] MediaSession handlers not fully supported")
     }
   }, [])
 
@@ -136,36 +155,105 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       setCurrentChunkIndex(nextChunkIndex)
       if (audioRef.current && currentItem.audioChunks[nextChunkIndex]) {
         audioRef.current.src = currentItem.audioChunks[nextChunkIndex]
-        audioRef.current.play()
+        audioRef.current.play().catch(console.error)
       }
     } else if (queueIndex < queue.length - 1) {
       // Play next in queue
       const nextIndex = queueIndex + 1
       setQueueIndex(nextIndex)
-      playItem(queue[nextIndex])
+      playItemInternal(queue[nextIndex])
     } else {
       // End of queue
       setIsPlaying(false)
     }
   }, [currentItem, currentChunkIndex, queue, queueIndex])
 
-  const playItem = useCallback(
-    (item: QueueItem) => {
+  // Initialize audio element
+  useEffect(() => {
+    if (typeof window !== "undefined" && !audioRef.current) {
+      audioRef.current = new Audio()
+      audioRef.current.preload = "metadata"
+
+      if (isIOS() || isSafari()) {
+        audioRef.current.setAttribute("playsinline", "true")
+        audioRef.current.setAttribute("webkit-playsinline", "true")
+      }
+
+      audioRef.current.addEventListener("timeupdate", () => {
+        if (audioRef.current) {
+          setCurrentTime(audioRef.current.currentTime)
+          if ("mediaSession" in navigator && "setPositionState" in navigator.mediaSession) {
+            try {
+              navigator.mediaSession.setPositionState({
+                duration: audioRef.current.duration || 0,
+                playbackRate: audioRef.current.playbackRate,
+                position: audioRef.current.currentTime,
+              })
+            } catch (e) {
+              // Ignore errors
+            }
+          }
+        }
+      })
+
+      audioRef.current.addEventListener("loadedmetadata", () => {
+        if (audioRef.current) {
+          setDuration(audioRef.current.duration)
+          setIsBuffering(false)
+        }
+      })
+
+      audioRef.current.addEventListener("ended", handleTrackEnded)
+      audioRef.current.addEventListener("waiting", () => setIsBuffering(true))
+      audioRef.current.addEventListener("canplay", () => setIsBuffering(false))
+      audioRef.current.addEventListener("play", () => setIsPlaying(true))
+      audioRef.current.addEventListener("pause", () => setIsPlaying(false))
+
+      audioRef.current.addEventListener("error", (e) => {
+        console.error("[v0] Audio error:", e)
+        setIsBuffering(false)
+        setIsPlaying(false)
+      })
+
+      // Setup media session handlers
+      setupMediaSessionHandlers()
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.src = ""
+      }
+    }
+  }, [handleTrackEnded, setupMediaSessionHandlers])
+
+  const playItemInternal = useCallback(
+    async (item: QueueItem) => {
       setCurrentItem(item)
       setCurrentChunkIndex(0)
       setIsPlayerVisible(true)
+      updateMediaSession(item)
 
       if (audioRef.current) {
+        audioRef.current.pause()
+
         const audioSrc = item.audioChunks?.[0] || item.audioUrl
         if (audioSrc) {
           audioRef.current.src = audioSrc
           audioRef.current.playbackRate = playbackRate
           audioRef.current.volume = isMuted ? 0 : volume
-          audioRef.current.play().catch(console.error)
+
+          try {
+            await audioRef.current.play()
+          } catch (e) {
+            // Autoplay was prevented - user needs to click play
+            console.log("[v0] Autoplay blocked, waiting for user interaction")
+            setIsPlaying(false)
+          }
         }
       }
     },
-    [playbackRate, volume, isMuted],
+    [playbackRate, volume, isMuted, updateMediaSession],
   )
 
   const play = useCallback(
@@ -175,17 +263,17 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         const existingIndex = queue.findIndex((q) => q.id === item.id)
         if (existingIndex >= 0) {
           setQueueIndex(existingIndex)
-          playItem(queue[existingIndex])
+          playItemInternal(queue[existingIndex])
         } else {
           setQueue((prev) => [...prev, item])
           setQueueIndex(queue.length)
-          playItem(item)
+          playItemInternal(item)
         }
       } else if (audioRef.current && currentItem) {
         audioRef.current.play().catch(console.error)
       }
     },
-    [queue, currentItem, playItem],
+    [queue, currentItem, playItemInternal],
   )
 
   const pause = useCallback(() => {
@@ -239,9 +327,9 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     if (queueIndex < queue.length - 1) {
       const nextIndex = queueIndex + 1
       setQueueIndex(nextIndex)
-      playItem(queue[nextIndex])
+      playItemInternal(queue[nextIndex])
     }
-  }, [queueIndex, queue, playItem])
+  }, [queueIndex, queue, playItemInternal])
 
   const skipPrevious = useCallback(() => {
     if (currentTime > 3) {
@@ -249,9 +337,9 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     } else if (queueIndex > 0) {
       const prevIndex = queueIndex - 1
       setQueueIndex(prevIndex)
-      playItem(queue[prevIndex])
+      playItemInternal(queue[prevIndex])
     }
-  }, [queueIndex, queue, currentTime, seek, playItem])
+  }, [queueIndex, queue, currentTime, seek, playItemInternal])
 
   const skipForward = useCallback(
     (seconds = 15) => {
@@ -275,10 +363,10 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       })
       if (!currentItem) {
         setQueueIndex(0)
-        playItem(item)
+        playItemInternal(item)
       }
     },
-    [currentItem, playItem],
+    [currentItem, playItemInternal],
   )
 
   const removeFromQueue = useCallback((id: string) => {
@@ -300,10 +388,10 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     (index: number) => {
       if (index >= 0 && index < queue.length) {
         setQueueIndex(index)
-        playItem(queue[index])
+        playItemInternal(queue[index])
       }
     },
-    [queue, playItem],
+    [queue, playItemInternal],
   )
 
   const showPlayer = useCallback(() => setIsPlayerVisible(true), [])

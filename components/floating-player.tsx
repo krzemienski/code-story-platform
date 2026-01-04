@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 
 export function FloatingPlayer() {
   const {
@@ -50,9 +51,19 @@ export function FloatingPlayer() {
     hidePlayer,
   } = useAudioPlayerContext()
 
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640)
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
   if (!isPlayerVisible || !currentItem) return null
 
   const formatTime = (time: number) => {
+    if (!isFinite(time) || isNaN(time)) return "0:00"
     const minutes = Math.floor(time / 60)
     const seconds = Math.floor(time % 60)
     return `${minutes}:${seconds.toString().padStart(2, "0")}`
@@ -66,7 +77,9 @@ export function FloatingPlayer() {
       className={cn(
         "fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ease-out",
         isPlayerExpanded ? "h-auto" : "h-20",
+        "pb-safe",
       )}
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       {/* Backdrop blur */}
       <div className="absolute inset-0 bg-background/95 backdrop-blur-xl border-t border-border" />
@@ -101,14 +114,16 @@ export function FloatingPlayer() {
           </div>
 
           <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground hidden sm:flex"
-              onClick={skipPrevious}
-            >
-              <SkipBack className="h-4 w-4" />
-            </Button>
+            {!isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={skipPrevious}
+              >
+                <SkipBack className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -142,18 +157,20 @@ export function FloatingPlayer() {
             >
               <RotateCw className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground hidden sm:flex"
-              onClick={skipNext}
-              disabled={queueIndex >= queue.length - 1}
-            >
-              <SkipForward className="h-4 w-4" />
-            </Button>
+            {!isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={skipNext}
+                disabled={queueIndex >= queue.length - 1}
+              >
+                <SkipForward className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
-          {/* Progress and time */}
+          {/* Progress and time - hidden on mobile, shown in expanded */}
           <div className="hidden md:flex items-center gap-3 flex-1 max-w-md">
             <span className="text-xs text-muted-foreground w-12 text-right font-mono">{formatTime(currentTime)}</span>
             <Slider
@@ -203,7 +220,7 @@ export function FloatingPlayer() {
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "h-8 w-8 text-muted-foreground hover:text-foreground",
+                  "h-8 w-8 text-muted-foreground hover:text-foreground relative",
                   isPlayerExpanded && "text-primary",
                 )}
                 onClick={() => setPlayerExpanded(!isPlayerExpanded)}
@@ -235,14 +252,38 @@ export function FloatingPlayer() {
           </div>
         </div>
 
-        {/* Mobile progress bar */}
-        <div className="md:hidden absolute top-0 left-0 right-0 h-1 bg-secondary">
-          <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+        <div className="md:hidden absolute top-0 left-0 right-0">
+          <div
+            className="h-1 bg-secondary cursor-pointer"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const percent = (e.clientX - rect.left) / rect.width
+              seek(percent * (duration || 0))
+            }}
+          >
+            <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+          </div>
+          {isPlayerExpanded && (
+            <div className="flex justify-between px-4 py-1 text-xs text-muted-foreground">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+          )}
         </div>
 
         {/* Expanded queue panel */}
         {isPlayerExpanded && (
           <div className="border-t border-border pb-4">
+            <div className="md:hidden px-4 py-3">
+              <Slider
+                value={[currentTime]}
+                max={duration || 100}
+                step={1}
+                onValueChange={(v) => seek(v[0])}
+                className="w-full"
+              />
+            </div>
+
             <div className="py-4">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-semibold text-foreground">Queue ({queue.length})</h4>
