@@ -8,23 +8,64 @@ This document analyzes the current tale generation pipeline and proposes a dual-
 
 ---
 
-## Current State Analysis
+## Current State Analysis (Updated: January 2026)
+
+### Database Schema Status: COMPLETE
+
+The SQL script `scripts/001_create_codestory_tables.sql` is now **fully idempotent** with:
+- `DROP POLICY IF EXISTS` before all `CREATE POLICY` statements
+- `CREATE TABLE IF NOT EXISTS` for all tables
+- `CREATE INDEX IF NOT EXISTS` for all indexes
+- Exception handling for enum types (`DO $$ BEGIN ... EXCEPTION WHEN duplicate_object`)
+- All tables properly configured with RLS enabled
+
+**Tables:**
+| Table | Purpose | RLS | Status |
+|-------|---------|-----|--------|
+| `profiles` | User data extending auth.users | Yes | Ready |
+| `code_repositories` | GitHub repo cache | Yes | Ready |
+| `story_intents` | User learning goals | Yes | Ready |
+| `stories` | Generated tales | Yes | Ready |
+| `story_chapters` | Chapter breakdown | Yes | Ready |
+| `processing_logs` | Generation progress | Yes | Ready |
+
+**Key Columns in stories table:**
+- `is_public` - DEFAULT TRUE (for virality)
+- `status` - Uses `'completed'` (not `'complete'`)
+- `audio_chunks` - JSONB array for chunked audio
+- `play_count` - Tracks popularity
+- `generation_mode` - 'hybrid' or 'elevenlabs_studio'
+- `generation_config` - JSONB for model settings
 
 ### Current Pipeline (Hybrid Approach)
-\`\`\`
-User Input → Claude/GPT (Script) → ElevenLabs TTS API (Voice) → Audio Output
-\`\`\`
+
+```
+User Input → Claude/GPT (Script via AI Gateway) → ElevenLabs TTS API → Supabase Storage
+```
 
 **Components:**
-- **Script Generation**: Claude Sonnet / GPT-4o via Vercel AI Gateway
+- **Script Generation**: Claude Sonnet / GPT-4o via Vercel AI Gateway (auto-routed)
 - **Voice Synthesis**: ElevenLabs Text-to-Speech API (`eleven_flash_v2_5`)
 - **Storage**: Supabase Storage for audio chunks
+- **Model Selection**: Auto-recommends based on narrative style, duration, priority
+
+**Generation Route Flow (`app/api/stories/generate/route.ts`):**
+1. Load tale config from database
+2. Auto-select model if not specified (uses `recommendModel()`)
+3. Fetch intent context if available
+4. Analyze repository via GitHub API
+5. Generate script with Claude/GPT (prompt optimized per model)
+6. Parse chapters with GPT-4o-mini
+7. Chunk script for TTS (max 10,000 chars per chunk)
+8. Synthesize audio via ElevenLabs
+9. Upload chunks to Supabase Storage
+10. Update tale with audio URLs
 
 **Current Limitations:**
-1. No use of ElevenLabs Studio's advanced features (chapters, multi-voice, music, SFX)
+1. No use of ElevenLabs Studio's advanced features (multi-voice, music, SFX)
 2. Simple chunked TTS - no timing precision or audio layering
 3. No GenFM podcast generation capability
-4. Voice settings are static per tale type
+4. Timeout risk for long tales (5-minute Vercel limit)
 
 ---
 
@@ -52,9 +93,9 @@ User Input → Claude/GPT (Script) → ElevenLabs TTS API (Voice) → Audio Outp
 
 ### Mode 1: Unified ElevenLabs (Full Studio Pipeline)
 
-\`\`\`
+```
 User Input → ElevenLabs GenFM/Studio → Full Audio Production
-\`\`\`
+```
 
 **Best For:**
 - Podcast-style tales (conversational host + guest)
@@ -63,7 +104,7 @@ User Input → ElevenLabs GenFM/Studio → Full Audio Production
 - Multi-character narratives
 
 **Configuration:**
-\`\`\`typescript
+```typescript
 {
   mode: "elevenlabs_studio",
   format: "podcast" | "audiobook" | "documentary",
@@ -73,13 +114,13 @@ User Input → ElevenLabs GenFM/Studio → Full Audio Production
   duration: "short" | "default" | "long",
   focusAreas: string[] // Up to 3
 }
-\`\`\`
+```
 
 ### Mode 2: Hybrid Claude + ElevenLabs
 
-\`\`\`
+```
 User Input → Claude/GPT (Script) → ElevenLabs TTS → Audio
-\`\`\`
+```
 
 **Best For:**
 - Fiction narratives with complex storytelling
@@ -88,7 +129,7 @@ User Input → Claude/GPT (Script) → ElevenLabs TTS → Audio
 - Content requiring custom prompt engineering
 
 **Configuration:**
-\`\`\`typescript
+```typescript
 {
   mode: "claude_hybrid",
   scriptModel: "anthropic/claude-sonnet-4" | "openai/gpt-4o",
@@ -96,7 +137,53 @@ User Input → Claude/GPT (Script) → ElevenLabs TTS → Audio
   narrativeStyle: "fiction" | "documentary" | "tutorial" | "technical",
   voiceSettings: VoiceSettings
 }
-\`\`\`
+```
+
+---
+
+## Repository Analysis Procedure
+
+### Step 1: Initial Context Gathering
+```typescript
+// Files to always check first
+const contextFiles = [
+  'lib/types.ts',           // Type definitions
+  'lib/ai/models.ts',       // AI model configs
+  'lib/generation/modes.ts', // Generation modes
+  'app/api/stories/generate/route.ts', // Main pipeline
+]
+```
+
+### Step 2: Database Schema Validation
+```sql
+-- Verify all tables exist
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public';
+
+-- Verify stories table columns
+SELECT column_name, data_type FROM information_schema.columns 
+WHERE table_name = 'stories' ORDER BY ordinal_position;
+
+-- Verify RLS policies
+SELECT tablename, policyname FROM pg_policies 
+WHERE tablename IN ('profiles', 'stories', 'story_intents', 'story_chapters');
+```
+
+### Step 3: Code Pattern Analysis
+- Check all status value usage (`'completed'` not `'complete'`)
+- Verify `is_public` defaults to `TRUE`
+- Ensure all queries filter correctly for public access
+- Validate model configurations match available providers
+
+### Step 4: User Flow Verification
+| Flow | Start | End | Auth |
+|------|-------|-----|------|
+| Public Listen | `/story/[id]` | Audio plays | No |
+| Generate | `/dashboard` | Tale created | Yes |
+| Share | Tale page | Copy link | No |
+| Discover | `/discover` | Browse tales | No |
+| Auth | `/auth/*` | Sign up, login, error | No |
+| Settings | `/dashboard/settings` | User preferences | Yes |
 
 ---
 
@@ -135,42 +222,82 @@ User Input → Claude/GPT (Script) → ElevenLabs TTS → Audio
 
 ---
 
-## Implementation Tasks
+## Implementation Status
 
-### Phase 1: Core Architecture
-- [ ] Create `lib/generation/modes.ts` - Mode definitions and configs
-- [ ] Create `lib/generation/elevenlabs-studio.ts` - Studio API integration
-- [ ] Update `lib/generation/hybrid.ts` - Refactor current pipeline
-- [ ] Add mode selection to generation UI
+### Phase 1: Core Architecture - COMPLETE
+- [x] `lib/ai/models.ts` - Model definitions and auto-recommendation
+- [x] `lib/generation/modes.ts` - Mode definitions and configs
+- [x] `lib/generation/elevenlabs-studio.ts` - Studio API client skeleton
+- [x] SQL schema idempotent with DROP POLICY IF EXISTS
+- [x] Status values standardized to `'completed'`
+- [x] `is_public` defaults to `TRUE`
 
-### Phase 2: ElevenLabs Studio Integration
+### Phase 2: ElevenLabs Studio Integration - IN PROGRESS
 - [ ] Implement Studio project creation
 - [ ] Implement GenFM podcast generation
 - [ ] Add multi-voice support
 - [ ] Add music/SFX generation options
 
-### Phase 3: UI/UX Consistency Audit
+### Phase 3: UI/UX Consistency Audit - NEEDED
 - [ ] Audit all pages for design system compliance
 - [ ] Fix terminology: "Tale" not "Story" or "Tail"
 - [ ] Ensure public access works for all completed tales
 - [ ] Add generation mode selector to wizard
 
-### Phase 4: Testing & Validation
+### Phase 4: Testing & Validation - NEEDED
 - [ ] End-to-end test each user journey
 - [ ] Test both generation modes
-- [ ] Validate audio playback across devices
+- [ ] Validate audio playback across devices (especially iOS)
 - [ ] Performance testing for long tales
 
 ---
 
-## Database Schema Updates
+## Database Schema Reference
 
-\`\`\`sql
--- Add generation mode column
-ALTER TABLE stories ADD COLUMN IF NOT EXISTS generation_mode TEXT DEFAULT 'hybrid';
-ALTER TABLE stories ADD COLUMN IF NOT EXISTS elevenlabs_project_id TEXT;
-ALTER TABLE stories ADD COLUMN IF NOT EXISTS generation_config JSONB;
+```sql
+-- Complete idempotent schema available at:
+-- scripts/001_create_codestory_tables.sql
 
--- Add constraint for valid modes
-ALTER TABLE stories ADD CONSTRAINT valid_generation_mode 
-  CHECK (generation_mode IN ('hybrid', 'elevenlabs_studio'));
+-- Key constraints:
+-- stories.status IN ('pending', 'analyzing', 'generating', 'synthesizing', 'completed', 'failed')
+-- stories.narrative_style IN ('fiction', 'documentary', 'tutorial', 'podcast', 'technical')
+-- stories.is_public DEFAULT TRUE
+-- story_intents.intent_category IN (
+--   'architecture_understanding', 'onboarding_deep_dive', 'specific_feature_focus',
+--   'code_review_prep', 'learning_patterns', 'api_documentation',
+--   'bug_investigation', 'migration_planning', 'quick_overview'
+-- )
+```
+
+---
+
+## Environment Variables Required
+
+| Variable | Purpose | Required |
+|----------|---------|----------|
+| `SUPABASE_URL` | Database connection | Yes |
+| `SUPABASE_ANON_KEY` | Public API key | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Admin operations | Yes |
+| `ELEVENLABS_API_KEY` | Voice synthesis | Yes |
+| `ANTHROPIC_API_KEY` | Claude models (optional, AI Gateway handles) | No |
+| `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL` | Auth redirect in dev | Dev only |
+
+---
+
+## Troubleshooting Guide
+
+### "Configure" Prompt Appearing
+- **Cause**: SQL scripts in `/scripts` folder trigger v0 to prompt execution
+- **Fix**: Scripts are idempotent; safe to run or ignore if DB already setup
+
+### Tales Not Public
+- **Check**: `SELECT id, is_public FROM stories WHERE status = 'completed';`
+- **Fix**: `UPDATE stories SET is_public = TRUE WHERE status = 'completed';`
+
+### Audio Not Playing on iOS
+- **Cause**: Howler.js SSR issues or Media Session API not set
+- **Fix**: Ensure dynamic imports for howler, check audio-player-context.tsx
+
+### Generation Stuck in "synthesizing"
+- **Cause**: ElevenLabs API timeout or error
+- **Fix**: Check ELEVENLABS_API_KEY, reset story status to 'failed' for retry

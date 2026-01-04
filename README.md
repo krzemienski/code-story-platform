@@ -11,44 +11,149 @@ Code Tales is an open-source platform that analyzes code repositories and genera
 
 Code Tales transforms any public GitHub repository into an audio experience. Whether you prefer a fictional adventure through code, a documentary-style exploration, or a technical deep-dive, our AI agents analyze the repository structure, understand the architecture, and craft a story tailored to your preferences.
 
-## Architecture
+## System Architecture
 
-\`\`\`
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              CODE TALES PLATFORM                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌───────────┐ │
-│  │   GitHub     │───▶│   Analyzer   │───▶│   Narrator   │───▶│ Synthesizer│ │
-│  │   Repo URL   │    │    Agent     │    │    Agent     │    │   Agent   │ │
-│  └──────────────┘    └──────────────┘    └──────────────┘    └───────────┘ │
-│         │                   │                   │                   │       │
-│         ▼                   ▼                   ▼                   ▼       │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌───────────┐ │
-│  │  Fetch Tree  │    │  Build Map   │    │ Generate     │    │ ElevenLabs│ │
-│  │  & Metadata  │    │  & Patterns  │    │ Script       │    │   TTS     │ │
-│  └──────────────┘    └──────────────┘    └──────────────┘    └───────────┘ │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                         SUPABASE (PostgreSQL)                            ││
-│  │  ┌─────────┐ ┌─────────────────┐ ┌────────┐ ┌─────────────────────────┐ ││
-│  │  │profiles │ │code_repositories│ │stories │ │    story_chapters       │ ││
-│  │  └─────────┘ └─────────────────┘ └────────┘ └─────────────────────────┘ ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                      FLOATING AUDIO PLAYER                               ││
-│  │  ┌──────────┐ ┌──────────┐ ┌─────────┐ ┌────────┐ ┌─────────────────┐   ││
-│  │  │ Waveform │ │ Progress │ │ Queue   │ │ Volume │ │ Persist Across  │   ││
-│  │  │ Display  │ │  Slider  │ │ Manager │ │Control │ │   Navigation    │   ││
-│  │  └──────────┘ └──────────┘ └─────────┘ └────────┘ └─────────────────┘   ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────────────────┘
-\`\`\`
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                                  CODE TALES PLATFORM                                 │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐│
+│  │                              USER INTERFACE LAYER                                ││
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ ││
+│  │  │  Landing    │  │  Dashboard  │  │  Discover   │  │  Story Player           │ ││
+│  │  │  (page.tsx) │  │  (My Tales) │  │  (Public)   │  │  (Floating + Dedicated) │ ││
+│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └───────────┬─────────────┘ ││
+│  └─────────┼────────────────┼────────────────┼─────────────────────┼───────────────┘│
+│            │                │                │                     │                │
+│  ┌─────────▼────────────────▼────────────────▼─────────────────────▼───────────────┐│
+│  │                              COMPONENT LAYER                                     ││
+│  │  ┌────────────────┐  ┌──────────────────┐  ┌──────────────────┐  ┌────────────┐ ││
+│  │  │ StoryGenerator │  │ ChronicleCard    │  │ FloatingPlayer   │  │ Processing │ ││
+│  │  │ - Mode Select  │  │ - Play/Queue     │  │ - Global State   │  │ Logs       │ ││
+│  │  │ - Config Panel │  │ - Actions        │  │ - Chunk Playback │  │ - Real-time│ ││
+│  │  └───────┬────────┘  └────────┬─────────┘  └────────┬─────────┘  └─────┬──────┘ ││
+│  └──────────┼───────────────────┼──────────────────────┼──────────────────┼────────┘│
+│             │                   │                      │                  │         │
+│  ┌──────────▼───────────────────▼──────────────────────▼──────────────────▼────────┐│
+│  │                                API LAYER                                         ││
+│  │  ┌────────────────────────────────────────────────────────────────────────────┐ ││
+│  │  │                    /api/stories/generate/route.ts                          │ ││
+│  │  │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌─────────────┐  │ ││
+│  │  │  │   ANALYZER   │──▶│   NARRATOR   │──▶│ SYNTHESIZER  │──▶│   STORAGE   │  │ ││
+│  │  │  │   (GitHub)   │   │   (Claude)   │   │ (ElevenLabs) │   │  (Supabase) │  │ ││
+│  │  │  └──────────────┘   └──────────────┘   └──────────────┘   └─────────────┘  │ ││
+│  │  └────────────────────────────────────────────────────────────────────────────┘ ││
+│  │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────────────┐  ││
+│  │  │ /api/stories/[id]│  │ /api/chat/intent │  │ /api/stories/[id]/download   │  ││
+│  │  │ CRUD Operations  │  │ Intent Agent     │  │ Audio Chunk Merging          │  ││
+│  │  └──────────────────┘  └──────────────────┘  └──────────────────────────────┘  ││
+│  └─────────────────────────────────────────────────────────────────────────────────┘│
+│                                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐│
+│  │                              SERVICE LAYER                                       ││
+│  │  ┌──────────────────────────┐  ┌──────────────────────────────────────────────┐ ││
+│  │  │ lib/agents/              │  │ lib/generation/                              │ ││
+│  │  │ ├── github.ts (Analysis) │  │ ├── modes.ts (Hybrid/Studio)                 │ ││
+│  │  │ ├── prompts.ts (Styles)  │  │ └── elevenlabs-studio.ts (GenFM)             │ ││
+│  │  │ └── log-helper.ts        │  │                                              │ ││
+│  │  └──────────────────────────┘  └──────────────────────────────────────────────┘ ││
+│  │  ┌──────────────────────────┐  ┌──────────────────────────────────────────────┐ ││
+│  │  │ lib/ai/                  │  │ lib/content-generation/                      │ ││
+│  │  │ ├── models.ts            │  │ └── framework.ts                             │ ││
+│  │  │ └── provider.ts          │  │                                              │ ││
+│  │  └──────────────────────────┘  └──────────────────────────────────────────────┘ ││
+│  └─────────────────────────────────────────────────────────────────────────────────┘│
+│                                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐│
+│  │                              DATA LAYER (Supabase)                               ││
+│  │  ┌──────────┐  ┌─────────────────┐  ┌──────────┐  ┌─────────────────────────┐   ││
+│  │  │ profiles │  │code_repositories│  │ stories  │  │   processing_logs       │   ││
+│  │  │ (users)  │  │ (repo cache)    │  │ (tales)  │  │   (real-time progress)  │   ││
+│  │  └──────────┘  └─────────────────┘  └──────────┘  └─────────────────────────┘   ││
+│  │  ┌──────────────────────────────────────────────────────────────────────────┐   ││
+│  │  │                    Supabase Storage (story-audio bucket)                 │   ││
+│  │  │                    Audio chunks: {story_id}/chunk_{n}.mp3                │   ││
+│  │  └──────────────────────────────────────────────────────────────────────────┘   ││
+│  └─────────────────────────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Data Flow Diagram
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│                           TALE GENERATION PIPELINE                                  │
+├────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                     │
+│  USER INPUT                                                                         │
+│  ┌─────────────────┐                                                               │
+│  │ GitHub URL      │                                                               │
+│  │ Narrative Style │                                                               │
+│  │ Duration        │                                                               │
+│  │ Generation Mode │───────────────────┐                                           │
+│  └─────────────────┘                   │                                           │
+│                                        ▼                                           │
+│  PHASE 1: ANALYSIS              ┌──────────────┐                                   │
+│  ┌─────────────────────────────▶│  GitHub API  │                                   │
+│  │                              └──────┬───────┘                                   │
+│  │                                     │                                           │
+│  │  ┌──────────────────────────────────▼────────────────────────────────────────┐ │
+│  │  │ Repository Analysis                                                        │ │
+│  │  │ • Fetch tree structure (directories, files)                                │ │
+│  │  │ • Read README.md, package.json, config files                               │ │
+│  │  │ • Detect languages, frameworks, patterns                                   │ │
+│  │  │ • Identify key architectural components                                    │ │
+│  │  └──────────────────────────────────┬────────────────────────────────────────┘ │
+│  │                                     │                                           │
+│  │                                     ▼                                           │
+│  │  PHASE 2: GENERATION         ┌──────────────┐                                   │
+│  │  (Mode: Hybrid)              │ Claude API   │                                   │
+│  │  ┌──────────────────────────▶│ (Anthropic)  │                                   │
+│  │  │                           └──────┬───────┘                                   │
+│  │  │                                  │                                           │
+│  │  │  ┌───────────────────────────────▼─────────────────────────────────────────┐│
+│  │  │  │ Script Generation                                                        ││
+│  │  │  │ • Apply narrative style (fiction/documentary/tutorial/podcast/technical)││
+│  │  │  │ • Calculate tokens based on duration (150 words/min)                     ││
+│  │  │  │ • Generate engaging script with proper pacing                            ││
+│  │  │  └───────────────────────────────┬─────────────────────────────────────────┘│
+│  │  │                                  │                                           │
+│  │  │                                  ▼                                           │
+│  │  │  PHASE 3: SYNTHESIS       ┌──────────────┐                                   │
+│  │  │  ┌───────────────────────▶│ ElevenLabs   │                                   │
+│  │  │  │                        │ TTS API      │                                   │
+│  │  │  │                        └──────┬───────┘                                   │
+│  │  │  │                               │                                           │
+│  │  │  │  ┌────────────────────────────▼────────────────────────────────────────┐ │
+│  │  │  │  │ Audio Generation                                                     │ │
+│  │  │  │  │ • Split script into ~8000 char chunks                                │ │
+│  │  │  │  │ • Apply voice settings (stability, similarity)                       │ │
+│  │  │  │  │ • Generate MP3 for each chunk                                        │ │
+│  │  │  │  │ • Upload chunks to Supabase Storage                                  │ │
+│  │  │  │  └────────────────────────────┬────────────────────────────────────────┘ │
+│  │  │  │                               │                                           │
+│  │  │  │                               ▼                                           │
+│  │  │  │  PHASE 4: STORAGE      ┌──────────────┐                                   │
+│  │  │  │  ┌────────────────────▶│  Supabase    │                                   │
+│  │  │  │  │                     │  Storage     │                                   │
+│  │  │  │  │                     └──────┬───────┘                                   │
+│  │  │  │  │                            │                                           │
+│  │  │  │  │  ┌─────────────────────────▼──────────────────────────────────────────┐│
+│  │  │  │  │  │ Final Storage                                                      ││
+│  │  │  │  │  │ • Store audio_chunks array in stories table                        ││
+│  │  │  │  │  │ • Update status to 'completed'                                     ││
+│  │  │  │  │  │ • Set audio_url to first chunk or merged file                      ││
+│  │  │  │  │  │ • Make public for virality (is_public = true)                      ││
+│  │  │  │  │  └─────────────────────────────────────────────────────────────────────┘│
+│  │                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
 
 ## Features
 
 - **Multi-Agent AI Pipeline** - Specialized agents for analysis, narration, and synthesis
+- **Dual Generation Modes** - Hybrid (Claude + ElevenLabs TTS) or Full Studio (ElevenLabs GenFM)
 - **5 Narrative Styles** - Fiction, documentary, tutorial, podcast, and technical
 - **High-Quality Audio** - ElevenLabs text-to-speech with multiple voice options
 - **Persistent Floating Player** - Audio continues while browsing the site
@@ -59,7 +164,7 @@ Code Tales transforms any public GitHub repository into an audio experience. Whe
 
 ## Project Structure
 
-\`\`\`
+```
 code-story-platform/
 ├── app/
 │   ├── api/
@@ -83,6 +188,7 @@ code-story-platform/
 │   ├── chronicle-card.tsx           # Story card with play/queue actions
 │   ├── floating-player.tsx          # Global persistent audio player
 │   ├── story-generator.tsx          # Generation form & progress
+│   ├── generation-mode-selector.tsx # Hybrid vs Studio mode toggle
 │   ├── processing-logs.tsx          # Real-time generation logs
 │   ├── navbar.tsx                   # Main navigation
 │   ├── parallax-background.tsx      # Animated background effects
@@ -93,6 +199,12 @@ code-story-platform/
 │   │   ├── github.ts                # Repository analysis (tree, metadata)
 │   │   ├── prompts.ts               # Narrative style system prompts
 │   │   └── log-helper.ts            # Processing log utilities
+│   ├── ai/
+│   │   ├── models.ts                # AI model definitions
+│   │   └── provider.ts              # Multi-model provider abstraction
+│   ├── generation/
+│   │   ├── modes.ts                 # Hybrid vs Full Studio modes
+│   │   └── elevenlabs-studio.ts     # ElevenLabs Studio API client
 │   ├── audio-player-context.tsx     # Global audio state management
 │   ├── supabase/
 │   │   ├── client.ts                # Browser Supabase client
@@ -100,91 +212,37 @@ code-story-platform/
 │   │   └── service.ts               # Service role client (bypasses RLS)
 │   └── types.ts                     # TypeScript type definitions
 │
-└── scripts/
-    ├── 001_create_codetales_tables.sql
-    ├── 002_create_profile_trigger.sql
-    ├── 003_create_storage_bucket.sql
-    ├── 004_add_play_count_function.sql
-    └── ...
-\`\`\`
+├── scripts/                         # SQL migrations (idempotent)
+│   ├── 001_create_codestory_tables.sql
+│   ├── 002_create_profile_trigger.sql
+│   └── ...
+│
+├── docs/
+│   ├── ELEVENLABS-CLAUDE-ANALYSIS.md
+│   └── REPOSITORY-ANALYSIS-PROCEDURE.md
+│
+├── CLAUDE.md                        # AI assistant guidance
+├── Makefile                         # Build and run commands
+└── docker-compose.yml               # Container orchestration
+```
 
-## How It Works
+## Quick Start
 
-### 1. Repository Analysis (`lib/agents/github.ts`)
+```bash
+# Clone and install
+git clone https://github.com/krzemienski/code-story-platform.git
+cd code-story-platform
+make install
 
-When you submit a GitHub URL, the **Analyzer Agent** fetches:
+# Set up environment
+cp .env.example .env.local
+# Edit .env.local with your credentials
 
-\`\`\`typescript
-// Fetch repository tree structure
-const tree = await fetchRepoTree(owner, repo)
+# Start development
+make dev
+```
 
-// Analyze key directories, config files, languages
-const analysis = {
-  structure: tree,
-  readme: await fetchFileContent(owner, repo, 'README.md'),
-  languages: await fetchLanguages(owner, repo),
-  keyDirectories: identifyKeyDirectories(tree),
-  packageJson: await fetchFileContent(owner, repo, 'package.json'),
-  metadata: await fetchRepoMetadata(owner, repo)
-}
-\`\`\`
-
-### 2. Script Generation (`app/api/stories/generate/route.ts`)
-
-The **Narrator Agent** uses Claude to generate a script based on:
-
-- Repository analysis summary
-- Selected narrative style (fiction, documentary, etc.)
-- Target duration (5-45 minutes)
-- User expertise level
-
-\`\`\`typescript
-const result = await generateText({
-  model: "anthropic/claude-sonnet-4-20250514",
-  system: getStoryPrompt(style, expertise, targetMinutes),
-  prompt: `Create an audio story for ${repo}...`,
-  maxTokens: estimatedTokensNeeded,
-  temperature: 0.8
-})
-\`\`\`
-
-### 3. Audio Synthesis
-
-The **Synthesizer Agent** converts the script to audio using ElevenLabs:
-
-\`\`\`typescript
-// Split long scripts into chunks (max 8000 chars each)
-const scriptChunks = splitTextIntoChunks(script, 8000)
-
-// Generate audio for each chunk
-for (const chunk of scriptChunks) {
-  const audioResponse = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        text: chunk,
-        model_id: "eleven_flash_v2_5",
-        voice_settings: {
-          stability: style === "fiction" ? 0.35 : 0.5,
-          similarity_boost: 0.8
-        }
-      })
-    }
-  )
-  // Upload chunk to Supabase Storage
-  await supabase.storage.from("story-audio").upload(filename, audioBuffer)
-}
-\`\`\`
-
-### 4. Playback (`lib/audio-player-context.tsx`)
-
-The floating player manages:
-
-- Current track and queue state
-- Seamless chunk transitions for long stories
-- Play/pause across page navigation
-- Volume and progress controls
+Visit [http://localhost:3000](http://localhost:3000)
 
 ## Narrative Styles
 
@@ -196,106 +254,20 @@ The floating player manages:
 | **Podcast** | Casual conversation style, like chatting with a friend. | Easy listening |
 | **Technical** | Deep-dive with exact file paths, complexity analysis. | Expert practitioners |
 
-## Database Schema
-
-### Core Tables
-
-\`\`\`sql
--- User profiles (extends Supabase auth.users)
-profiles (id, email, name, subscription_tier, usage_quota)
-
--- Cached repository data
-code_repositories (id, user_id, repo_url, repo_owner, repo_name, 
-                   primary_language, stars_count, analysis_cache)
-
--- Generated stories
-stories (id, user_id, repository_id, title, narrative_style,
-         target_duration_minutes, actual_duration_seconds,
-         script_text, audio_url, audio_chunks, status, progress,
-         is_public, play_count)
-
--- Processing logs for real-time UI
-processing_logs (id, story_id, agent_type, message, details, level)
-\`\`\`
-
-### Row Level Security
-
-All tables have RLS enabled:
-- Users can only access their own data
-- Public stories are readable by everyone
-- Service role bypasses RLS for generation pipeline
-
 ## Environment Variables
 
-\`\`\`env
+```env
 # Required
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ELEVENLABS_API_KEY=sk_...
+ANTHROPIC_API_KEY=sk-ant-...
 
 # Optional
 GITHUB_TOKEN=ghp_...  # For private repos
 NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=http://localhost:3000/auth/callback
-\`\`\`
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- pnpm
-- Supabase project
-- ElevenLabs API key
-
-### Installation
-
-\`\`\`bash
-# Clone the repository
-git clone https://github.com/krzemienski/code-story-platform.git
-cd code-story-platform
-
-# Install dependencies
-pnpm install
-
-# Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your credentials
-
-# Run database migrations
-# Execute scripts/001-007 in your Supabase SQL editor
-
-# Start development server
-pnpm dev
-\`\`\`
-
-Visit [http://localhost:3000](http://localhost:3000) or [https://codetale.ai](https://codetale.ai)
-
-## API Reference
-
-### POST `/api/stories/generate`
-
-Triggers story generation for a story record.
-
-\`\`\`typescript
-// Request
-{ storyId: string }
-
-// Response
-{ success: true, storyId: string }
-\`\`\`
-
-### GET `/api/stories/[id]`
-
-Fetch story details with repository info.
-
-### POST `/api/stories/[id]/restart`
-
-Restart a failed or pending story generation.
-
-### GET `/api/stories/[id]/download`
-
-Download complete audio (merges all chunks).
+```
 
 ## Contributing
 
@@ -305,14 +277,6 @@ Download complete audio (merges all chunks).
 4. Push to branch (`git push origin feature/amazing`)
 5. Open a Pull Request
 
-### Areas for Contribution
-
-- **New narrative styles** - Add prompts in `lib/agents/prompts.ts`
-- **Language support** - Improve analysis for specific languages
-- **Voice options** - Add ElevenLabs voice presets
-- **UI/UX improvements** - Enhance the player, cards, or discovery
-- **Performance** - Optimize generation pipeline
-
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
@@ -321,7 +285,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - **Website**: [codetale.ai](https://codetale.ai)
 - **Repository**: [github.com/krzemienski/code-story-platform](https://github.com/krzemienski/code-story-platform)
-- **Issues**: [Report bugs or request features](https://github.com/krzemienski/code-story-platform/issues)
+- **Documentation**: [CLAUDE.md](./CLAUDE.md)
 
 ---
 

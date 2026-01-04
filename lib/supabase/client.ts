@@ -1,6 +1,6 @@
-import { createBrowserClient } from "@supabase/ssr"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
-let client: ReturnType<typeof createBrowserClient> | null = null
+let client: ReturnType<typeof createSupabaseClient> | null = null
 
 export function createClient() {
   if (client) return client
@@ -9,7 +9,7 @@ export function createClient() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   // Skip client creation during build time if env vars are missing
-  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'placeholder') {
+  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === "placeholder") {
     // Return a mock client that does nothing during build
     return {
       auth: {
@@ -17,10 +17,27 @@ export function createClient() {
         getSession: async () => ({ data: { session: null }, error: null }),
         onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
         signOut: async () => ({ error: null }),
+        signInWithPassword: async () => ({ data: { user: null, session: null }, error: null }),
+        signUp: async () => ({ data: { user: null, session: null }, error: null }),
       },
-    } as unknown as ReturnType<typeof createBrowserClient>
+      from: () => ({
+        select: () => ({
+          eq: () => ({ single: async () => ({ data: null, error: null }), data: null, error: null }),
+          order: () => ({ limit: async () => ({ data: [], error: null }) }),
+          data: null,
+          error: null,
+        }),
+        insert: () => ({
+          select: () => ({ single: async () => ({ data: null, error: null }) }),
+          data: null,
+          error: null,
+        }),
+        update: () => ({ eq: () => ({ data: null, error: null }), data: null, error: null }),
+        delete: () => ({ eq: () => ({ data: null, error: null }), data: null, error: null }),
+      }),
+    } as unknown as ReturnType<typeof createSupabaseClient>
   }
 
-  client = createBrowserClient(supabaseUrl, supabaseAnonKey)
+  client = createSupabaseClient(supabaseUrl, supabaseAnonKey)
   return client
 }

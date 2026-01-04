@@ -1,12 +1,13 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with the Code Tales platform.
+This file provides comprehensive guidance for AI assistants (Claude, Cursor, GitHub Copilot) working with the Code Tales platform.
 
 ## Project Overview
 
 **Code Tales** transforms GitHub repositories into immersive audio stories using AI. The platform analyzes repository structure, generates narrative scripts with Claude, and synthesizes audio with ElevenLabs TTS.
 
-**Live Site**: [codetale.ai](https://codetale.ai)
+- **Live Site**: [codetale.ai](https://codetale.ai)
+- **Repository**: [github.com/krzemienski/code-story-platform](https://github.com/krzemienski/code-story-platform)
 
 ## Tech Stack
 
@@ -15,14 +16,49 @@ This file provides guidance to Claude Code when working with the Code Tales plat
 | **Framework** | Next.js 16 (App Router), React 19, TypeScript |
 | **Styling** | Tailwind CSS 4, shadcn/ui (Radix primitives) |
 | **Database** | Supabase (PostgreSQL with RLS) |
-| **Auth** | Supabase Auth (SSR) |
-| **AI** | Anthropic Claude (AI SDK), ElevenLabs TTS |
+| **Auth** | Supabase Auth |
+| **AI** | Anthropic Claude (via AI SDK), ElevenLabs TTS |
 | **Storage** | Supabase Storage (audio chunks) |
 | **Package Manager** | pnpm |
 
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     CODE TALES ARCHITECTURE                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  FRONTEND (Next.js App Router)                                   │
+│  ├── app/page.tsx              → Landing page                    │
+│  ├── app/dashboard/            → User dashboard (protected)      │
+│  ├── app/discover/             → Public story browser            │
+│  └── app/story/[id]/           → Public story player             │
+│                                                                  │
+│  API ROUTES                                                      │
+│  ├── /api/stories/generate     → Main generation pipeline        │
+│  ├── /api/stories/[id]         → CRUD operations                 │
+│  ├── /api/stories/[id]/restart → Restart failed generation       │
+│  └── /api/chat/intent          → Conversation agent              │
+│                                                                  │
+│  SERVICES (lib/)                                                 │
+│  ├── agents/github.ts          → Repository analysis             │
+│  ├── agents/prompts.ts         → Narrative style prompts         │
+│  ├── generation/modes.ts       → Hybrid vs Studio modes          │
+│  ├── ai/provider.ts            → Multi-model abstraction         │
+│  └── supabase/                 → Database clients                │
+│                                                                  │
+│  DATA LAYER (Supabase)                                           │
+│  ├── profiles                  → User profiles                   │
+│  ├── code_repositories         → Cached repo analysis            │
+│  ├── stories                   → Generated tales                 │
+│  └── processing_logs           → Real-time progress              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
 ## Project Structure
 
-\`\`\`
+```
 code-story-platform/
 ├── app/                      # Next.js App Router
 │   ├── api/                  # API routes
@@ -44,6 +80,12 @@ code-story-platform/
 │   │   ├── github.ts         # Repo analysis
 │   │   ├── prompts.ts        # Narrative prompts
 │   │   └── log-helper.ts     # Processing logs
+│   ├── ai/                   # AI model layer
+│   │   ├── models.ts         # Model definitions
+│   │   └── provider.ts       # Multi-model provider
+│   ├── generation/           # Generation modes
+│   │   ├── modes.ts          # Hybrid vs Studio
+│   │   └── elevenlabs-studio.ts
 │   ├── supabase/             # DB clients
 │   │   ├── client.ts         # Browser client
 │   │   ├── server.ts         # Server client
@@ -51,87 +93,142 @@ code-story-platform/
 │   ├── audio-player-context.tsx  # Global audio state
 │   └── types.ts              # TypeScript types
 ├── scripts/                  # SQL migrations (001-007)
-└── styles/                   # Global CSS
-\`\`\`
+├── docs/                     # Additional documentation
+└── Makefile                  # Build commands
+```
 
 ## Quick Commands
 
-\`\`\`bash
-pnpm dev          # Start dev server (localhost:3000)
-pnpm build        # Production build
-pnpm lint         # ESLint check
-pnpm start        # Start production server
-\`\`\`
+```bash
+# Development
+make dev              # Start dev server (localhost:3000)
+make install          # Install dependencies
+make lint             # Run ESLint
 
-## Architecture: Multi-Agent Pipeline
+# Production
+make build            # Production build
+make start            # Start production server
 
-\`\`\`
-GitHub URL → Analyzer Agent → Narrator Agent → Synthesizer Agent → Audio
-                 │                  │                  │
-           Fetch tree &       Generate script    ElevenLabs TTS
-           metadata           with Claude        (chunked upload)
-\`\`\`
+# Docker
+make docker-build     # Build Docker image
+make docker-up        # Start with docker-compose
+make docker-down      # Stop containers
+make docker-logs      # View logs
 
-### Key Flow (`app/api/stories/generate/route.ts`)
+# Database
+make db-types         # Generate TypeScript types from Supabase
+```
 
-1. **Analyzer**: Fetches repo tree, README, languages, package.json
-2. **Narrator**: Claude generates script based on style & duration
-3. **Synthesizer**: ElevenLabs converts to audio, uploads chunks to Supabase Storage
+## Generation Pipeline
+
+The main generation flow in `app/api/stories/generate/route.ts`:
+
+```
+1. ANALYZER AGENT
+   └── Fetch repo tree, README, languages, package.json
+   └── Identify key directories and patterns
+   └── Cache analysis in code_repositories table
+
+2. NARRATOR AGENT
+   └── Select narrative style (fiction/documentary/tutorial/podcast/technical)
+   └── Calculate tokens based on duration (150 words/min)
+   └── Generate script with Claude
+
+3. SYNTHESIZER AGENT
+   └── Split script into ~8000 char chunks
+   └── Generate audio with ElevenLabs TTS
+   └── Upload chunks to Supabase Storage
+
+4. FINALIZATION
+   └── Update story status to 'completed'
+   └── Set audio_url and audio_chunks array
+   └── Make public for virality (is_public = true)
+```
 
 ## Database Schema
 
-Core tables in Supabase (see `scripts/001_create_codestory_tables.sql`):
+Core tables (see `scripts/001_create_codestory_tables.sql`):
 
-- `profiles` - User profiles (extends auth.users)
-- `code_repositories` - Cached repo analysis
-- `stories` - Generated stories with audio_chunks array
-- `processing_logs` - Real-time generation progress
+```sql
+-- User profiles (extends auth.users)
+profiles (id, email, name, subscription_tier, usage_quota)
 
-**RLS**: All tables have row-level security. Use `lib/supabase/service.ts` for admin operations.
+-- Cached repository data
+code_repositories (id, user_id, repo_url, repo_owner, repo_name, 
+                   primary_language, stars_count, analysis_cache)
+
+-- Generated stories
+stories (id, user_id, repository_id, title, narrative_style,
+         target_duration_minutes, actual_duration_seconds,
+         script_text, audio_url, audio_chunks, status, progress,
+         is_public, play_count, generation_mode, model_config)
+
+-- Processing logs for real-time UI
+processing_logs (id, story_id, agent_type, message, details, level)
+```
+
+**Important**: All tables have Row Level Security (RLS) enabled. Use `lib/supabase/service.ts` for admin operations that bypass RLS.
 
 ## Narrative Styles
 
 Defined in `lib/agents/prompts.ts`:
 
-| Style | Use Case |
-|-------|----------|
-| `fiction` | Dramatic storytelling, code as living world |
-| `documentary` | Authoritative architecture exploration |
-| `tutorial` | Educational walkthrough |
-| `podcast` | Casual conversation style |
-| `technical` | Deep-dive with file paths |
+| Style | Description | Voice Settings |
+|-------|-------------|----------------|
+| `fiction` | Dramatic storytelling, code as living world | stability: 0.35, similarity: 0.8 |
+| `documentary` | Authoritative architecture exploration | stability: 0.5, similarity: 0.85 |
+| `tutorial` | Educational walkthrough | stability: 0.6, similarity: 0.75 |
+| `podcast` | Casual conversation style | stability: 0.4, similarity: 0.8 |
+| `technical` | Deep-dive with file paths | stability: 0.7, similarity: 0.9 |
+
+## Generation Modes
+
+Defined in `lib/generation/modes.ts`:
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| **Hybrid** | Claude generates script, ElevenLabs synthesizes | Fiction, tutorials, technical |
+| **Full Studio** | ElevenLabs GenFM handles both | Podcast-style content |
 
 ## Environment Variables
 
-\`\`\`env
+```env
 # Required
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-ELEVENLABS_API_KEY=
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+ELEVENLABS_API_KEY=sk_...
+ANTHROPIC_API_KEY=sk-ant-...
 
 # Optional
-GITHUB_TOKEN=              # For private repos
-\`\`\`
+GITHUB_TOKEN=ghp_...              # For private repos
+NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=http://localhost:3000/auth/callback
+```
 
 ## Code Patterns
 
 ### Supabase Client Selection
 
-\`\`\`typescript
-// Browser components
+```typescript
+// Browser components - uses cookies for auth
 import { createClient } from "@/lib/supabase/client"
 
-// Server components/actions
+// Server components/actions - reads cookies
 import { createClient } from "@/lib/supabase/server"
 
-// API routes needing RLS bypass
+// API routes needing RLS bypass - service role
 import { createServiceClient } from "@/lib/supabase/service"
-\`\`\`
+```
 
 ### Audio Chunking
 
-Long scripts are split into ~8000 char chunks for reliable TTS processing. Chunks stored in `story.audio_chunks` array, merged on download.
+Long scripts are split into ~8000 char chunks for reliable TTS processing:
+
+```typescript
+const chunks = splitTextIntoChunks(script, 8000)
+// Chunks stored in story.audio_chunks array
+// Merged on download via /api/stories/[id]/download
+```
 
 ### Global Audio Player
 
@@ -140,34 +237,217 @@ Long scripts are split into ~8000 char chunks for reliable TTS processing. Chunk
 - Persists across page navigation
 - Handles multi-chunk playback seamlessly
 
-## Testing & Quality
+### Processing Logs
 
-- TypeScript strict mode enabled
-- ESLint for code quality
-- No test framework currently configured
+Real-time progress updates via `lib/agents/log-helper.ts`:
+
+```typescript
+await addProcessingLog(supabase, storyId, {
+  agent_type: "narrator",
+  message: "Generating script...",
+  level: "info"
+})
+```
 
 ## Common Tasks
 
 ### Add New Narrative Style
 
 1. Add prompt in `lib/agents/prompts.ts`
-2. Update style type in `lib/types.ts`
-3. Add UI option in story generator component
+2. Update `NarrativeStyle` type in `lib/types.ts`
+3. Add UI option in `components/story-generator.tsx`
+4. Configure voice settings in `lib/generation/modes.ts`
 
 ### Modify Generation Pipeline
 
-Main logic in `app/api/stories/generate/route.ts`. Processing logs sent via `lib/agents/log-helper.ts`.
+Main logic in `app/api/stories/generate/route.ts`. Key functions:
+- `analyzeRepository()` - GitHub analysis
+- `generateScript()` - Claude script generation
+- `synthesizeAudio()` - ElevenLabs TTS
 
-### Add New UI Component
+### Add New AI Model
 
-Use shadcn/ui CLI or create in `components/ui/`. Follow existing patterns with Radix primitives.
+1. Add model definition in `lib/ai/models.ts`
+2. Update provider in `lib/ai/provider.ts`
+3. Add UI option in `components/model-selector.tsx`
 
-## Deployment
+### Debug Generation Issues
 
-Deployed on Vercel. Database migrations run manually via Supabase SQL editor.
+1. Check `processing_logs` table for real-time progress
+2. Look for `status: 'failed'` stories with `error_message`
+3. Use restart endpoint: POST `/api/stories/[id]/restart`
+
+## Status Values
+
+The `stories.status` column uses these values:
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Story created, waiting to start |
+| `analyzing` | Fetching and analyzing repository |
+| `generating` | Claude generating script |
+| `synthesizing` | ElevenLabs generating audio |
+| `completed` | Successfully finished |
+| `failed` | Error occurred (check error_message) |
+
+**Important**: Always use `"completed"` (not `"complete"`) to match the database.
+
+## Troubleshooting
+
+### "Configure" Prompt Appearing
+- SQL scripts in `/scripts` folder trigger v0 to prompt for execution
+- Database is already set up - scripts are idempotent, safe to skip
+
+### Tales Not Showing
+- Check `is_public = true` in stories table
+- Verify RLS policies allow public read access
+- Check status is `'completed'` not `'complete'`
+
+### Audio Not Playing
+- Verify `audio_url` or `audio_chunks` array is populated
+- Check Supabase Storage bucket policies
+- Ensure chunks are uploaded to `story-audio` bucket
+
+### Generation Stuck
+- Check `processing_logs` for last activity
+- Restart with POST `/api/stories/[id]/restart`
+- Look for timeout errors in server logs
 
 ## Links
 
-- [GitHub Repository](https://github.com/krzemienski/code-story-platform)
-- [README](./README.md) - Full documentation
+- [README](./README.md) - Full documentation with diagrams
+- [ElevenLabs Analysis](./docs/ELEVENLABS-CLAUDE-ANALYSIS.md) - Generation mode comparison
+- [Repository Analysis](./docs/REPOSITORY-ANALYSIS-PROCEDURE.md) - Analysis procedure
 - [Supabase Dashboard](https://supabase.com/dashboard)
+```
+
+```makefile file="Makefile"
+# Code Tales Platform - Makefile
+# ================================
+# Quick commands for development, building, and deployment
+
+.PHONY: help install dev build start lint clean docker-build docker-up docker-down docker-logs db-types
+
+# Default target
+help:
+	@echo "Code Tales Platform - Available Commands"
+	@echo "========================================="
+	@echo ""
+	@echo "Development:"
+	@echo "  make install      - Install dependencies with pnpm"
+	@echo "  make dev          - Start development server (localhost:3000)"
+	@echo "  make lint         - Run ESLint"
+	@echo "  make clean        - Remove node_modules and .next"
+	@echo ""
+	@echo "Production:"
+	@echo "  make build        - Create production build"
+	@echo "  make start        - Start production server"
+	@echo ""
+	@echo "Docker:"
+	@echo "  make docker-build - Build Docker image"
+	@echo "  make docker-up    - Start with docker-compose"
+	@echo "  make docker-down  - Stop docker-compose"
+	@echo "  make docker-logs  - View container logs"
+	@echo ""
+	@echo "Database:"
+	@echo "  make db-types     - Generate TypeScript types from Supabase"
+	@echo ""
+
+# ================================
+# Development
+# ================================
+
+install:
+	@echo "Installing dependencies..."
+	pnpm install
+
+dev:
+	@echo "Starting development server..."
+	pnpm dev
+
+lint:
+	@echo "Running ESLint..."
+	pnpm lint
+
+clean:
+	@echo "Cleaning build artifacts..."
+	rm -rf node_modules .next .turbo
+	@echo "Done. Run 'make install' to reinstall dependencies."
+
+# ================================
+# Production
+# ================================
+
+build:
+	@echo "Creating production build..."
+	pnpm build
+
+start:
+	@echo "Starting production server..."
+	pnpm start
+
+# ================================
+# Docker
+# ================================
+
+docker-build:
+	@echo "Building Docker image..."
+	docker-compose build
+
+docker-up:
+	@echo "Starting containers..."
+	docker-compose up -d
+	@echo ""
+	@echo "Frontend available at: http://localhost:3001"
+
+docker-down:
+	@echo "Stopping containers..."
+	docker-compose down
+
+docker-logs:
+	docker-compose logs -f frontend
+
+docker-restart: docker-down docker-up
+
+# ================================
+# Database
+# ================================
+
+db-types:
+	@echo "Generating TypeScript types from Supabase..."
+	@if [ -z "$$SUPABASE_PROJECT_ID" ]; then \
+		echo "Error: SUPABASE_PROJECT_ID environment variable not set"; \
+		echo "Usage: SUPABASE_PROJECT_ID=your_project_id make db-types"; \
+		exit 1; \
+	fi
+	npx supabase gen types typescript --project-id $$SUPABASE_PROJECT_ID > lib/database.types.ts
+	@echo "Types generated at lib/database.types.ts"
+
+# ================================
+# Quick Setup (for new developers)
+# ================================
+
+setup: install
+	@echo ""
+	@echo "Setup complete! Next steps:"
+	@echo "1. Copy .env.example to .env.local"
+	@echo "2. Fill in your Supabase and API credentials"
+	@echo "3. Run 'make dev' to start development"
+	@echo ""
+
+# ================================
+# CI/CD Helpers
+# ================================
+
+ci-check: lint build
+	@echo "CI checks passed!"
+
+# ================================
+# Utility
+# ================================
+
+# Check if required tools are installed
+check-deps:
+	@command -v pnpm >/dev/null 2>&1 || { echo "pnpm is required but not installed. Run: npm install -g pnpm"; exit 1; }
+	@command -v node >/dev/null 2>&1 || { echo "Node.js is required but not installed."; exit 1; }
+	@echo "All dependencies available!"

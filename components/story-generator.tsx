@@ -75,6 +75,13 @@ export function StoryGenerator() {
 
   const [generationConfig, setGenerationConfig] = useGenerationConfig()
 
+  // Generation state
+  const [storyId, setStoryId] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
+  const [progressMessage, setProgressMessage] = useState("")
+  const [isComplete, setIsComplete] = useState(false)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+
   useEffect(() => {
     if (generationConfig.autoSelectModel) {
       const durationMinutes = DURATIONS.find((d) => d.id === duration)?.minutes || 10
@@ -122,8 +129,9 @@ export function StoryGenerator() {
         stars: data.stargazers_count,
       })
       setStep("options")
-    } catch (err: any) {
-      setError(err.message || "Could not validate repository")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Could not validate repository"
+      setError(message)
     } finally {
       setIsValidating(false)
     }
@@ -199,19 +207,12 @@ export function StoryGenerator() {
           },
         }),
       })
-    } catch (err: any) {
-      console.error("[v0] Generation error:", err)
-      setError(err.message || "Failed to start generation")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to start generation"
+      setError(message)
       setStep("options")
     }
   }
-
-  // Generation state
-  const [storyId, setStoryId] = useState<string | null>(null)
-  const [progress, setProgress] = useState(0)
-  const [progressMessage, setProgressMessage] = useState("")
-  const [isComplete, setIsComplete] = useState(false)
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (!storyId || step !== "generating") return
