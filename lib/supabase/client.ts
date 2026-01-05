@@ -3,7 +3,10 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 let client: ReturnType<typeof createSupabaseClient> | null = null
 
 export function createClient() {
-  if (client) return client
+  if (typeof window === "undefined") {
+    // Server-side: use singleton
+    if (client) return client
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -38,6 +41,21 @@ export function createClient() {
     } as unknown as ReturnType<typeof createSupabaseClient>
   }
 
-  client = createSupabaseClient(supabaseUrl, supabaseAnonKey)
-  return client
+  const newClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  })
+
+  if (typeof window === "undefined") {
+    client = newClient
+  }
+
+  return newClient
+}
+
+export function clearClient() {
+  client = null
 }

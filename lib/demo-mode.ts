@@ -35,14 +35,14 @@ export const DEMO_STORIES = [
     target_duration_minutes: 15,
     actual_duration_seconds: 892,
     expertise_level: "intermediate",
-    status: "complete",
+    status: "completed",
     progress: 100,
     progress_message: "Complete",
     audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
     transcript: "Welcome to Code Tales. Today we're exploring React, one of the most popular JavaScript libraries...",
     play_count: 3,
     last_played_position: 245,
-    is_public: false,
+    is_public: true,
     created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     repository: {
@@ -63,7 +63,7 @@ export const DEMO_STORIES = [
     target_duration_minutes: 20,
     actual_duration_seconds: 1247,
     expertise_level: "expert",
-    status: "complete",
+    status: "completed",
     progress: 100,
     progress_message: "Complete",
     audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
@@ -166,13 +166,13 @@ export const DEMO_CHAPTERS = [
 
 export function isDemoMode(): boolean {
   if (typeof window === "undefined") return false
-  return document.cookie.includes("codetales_demo=true")
+  return document.cookie.includes("codetales_demo_mode=true")
 }
 
 export function setDemoMode(enabled: boolean): void {
   if (enabled) {
-    document.cookie = "codetales_demo=true; path=/; max-age=86400" // 24 hours
+    document.cookie = "codetales_demo_mode=true; path=/; max-age=86400" // 24 hours
   } else {
-    document.cookie = "codetales_demo=; path=/; max-age=0"
+    document.cookie = "codetales_demo_mode=; path=/; max-age=0"
   }
 }

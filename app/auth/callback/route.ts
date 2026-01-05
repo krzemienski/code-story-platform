@@ -5,11 +5,17 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
   const origin = requestUrl.origin
+  const redirectTo = requestUrl.searchParams.get("redirect_to") || "/dashboard"
 
   if (code) {
     const supabase = await createClient()
-    await supabase.auth.exchangeCodeForSession(code)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+
+    if (error) {
+      console.error("[v0] Auth callback error:", error.message)
+      return NextResponse.redirect(`${origin}/auth/error?message=${encodeURIComponent(error.message)}`)
+    }
   }
 
-  return NextResponse.redirect(`${origin}/dashboard`)
+  return NextResponse.redirect(`${origin}${redirectTo}`)
 }

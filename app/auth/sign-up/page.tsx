@@ -8,9 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Logo } from "@/components/logo"
+import { setDemoMode } from "@/lib/demo-mode"
 
 export default function SignUpPage() {
   const [name, setName] = useState("")
@@ -19,7 +19,6 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,17 +50,16 @@ export default function SignUpPage() {
         },
       })
       if (error) throw error
-      router.push("/auth/sign-up-success")
+      window.location.href = "/auth/sign-up-success"
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
-    } finally {
       setIsLoading(false)
     }
   }
 
   const handleDemoMode = () => {
-    sessionStorage.setItem("codetales_demo_mode", "true")
-    router.push("/dashboard")
+    setDemoMode(true)
+    window.location.href = "/dashboard"
   }
 
   return (
@@ -134,7 +132,11 @@ export default function SignUpPage() {
                     className="border-border bg-background text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
+                {error && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+                    {error}
+                  </div>
+                )}
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Create account"}
                 </Button>
