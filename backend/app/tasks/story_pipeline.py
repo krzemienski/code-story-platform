@@ -155,7 +155,14 @@ async def _run_pipeline(
     # Synthesize audio
     audio_chunks_data = elevenlabs.synthesize_long_text(script, voice)
 
-    # Upload audio chunks to S3
+    await supabase.insert_processing_log(
+        story_id=story_id,
+        agent_name=AgentName.SYNTHESIZER.value,
+        action=f"Audio synthesis complete, {len(audio_chunks_data)} chunks generated",
+        level=LogLevel.INFO,
+    )
+
+    # Upload individual chunks for seeking/chapter support
     audio_chunk_urls = []
     for i, chunk_data in enumerate(audio_chunks_data):
         chunk_url = s3.upload_audio(
@@ -165,15 +172,26 @@ async def _run_pipeline(
         )
         audio_chunk_urls.append(chunk_url)
 
-        await supabase.insert_processing_log(
-            story_id=story_id,
-            agent_name=AgentName.SYNTHESIZER.value,
-            action=f"Uploaded audio chunk {i + 1}/{len(audio_chunks_data)}",
-            level=LogLevel.INFO,
-        )
+    await supabase.insert_processing_log(
+        story_id=story_id,
+        agent_name=AgentName.SYNTHESIZER.value,
+        action=f"Uploaded {len(audio_chunk_urls)} audio chunks to S3",
+        level=LogLevel.INFO,
+    )
 
-    # Use first chunk as main audio URL (or concatenate later)
-    audio_url = audio_chunk_urls[0] if audio_chunk_urls else ""
+    # Concatenate and upload full audio file
+    audio_url = s3.upload_concatenated_audio(
+        audio_chunks=audio_chunks_data,
+        story_id=story_id,
+    )
+
+    await supabase.insert_processing_log(
+        story_id=story_id,
+        agent_name=AgentName.SYNTHESIZER.value,
+        action="Concatenated and uploaded full audio file",
+        level=LogLevel.INFO,
+        details={"audio_url": audio_url},
+    )
 
     # Estimate duration
     duration_seconds = elevenlabs.estimate_duration(script)

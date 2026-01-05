@@ -93,6 +93,46 @@ class S3Service:
 
         return f"https://{self._bucket}.s3.{self._region}.amazonaws.com/{key}"
 
+    def upload_concatenated_audio(
+        self,
+        audio_chunks: list[bytes],
+        story_id: str,
+        content_type: str = "audio/mpeg",
+    ) -> str:
+        """
+        Concatenate and upload multiple audio chunks as a single file.
+
+        MP3 files can be concatenated directly when they share the same
+        encoding settings (bitrate, sample rate, channels).
+
+        Args:
+            audio_chunks: List of audio file bytes to concatenate
+            story_id: Story ID for organizing files
+            content_type: MIME type of the audio
+
+        Returns:
+            Public URL of the uploaded concatenated file
+        """
+        if not audio_chunks:
+            raise ValueError("No audio chunks to concatenate")
+
+        # Simple concatenation for MP3 files with same encoding
+        concatenated = b"".join(audio_chunks)
+
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        file_id = str(uuid.uuid4())[:8]
+        key = f"audio/{story_id}/full_{timestamp}_{file_id}.mp3"
+
+        self._client.put_object(
+            Bucket=self._bucket,
+            Key=key,
+            Body=concatenated,
+            ContentType=content_type,
+            ACL="public-read",
+        )
+
+        return f"https://{self._bucket}.s3.{self._region}.amazonaws.com/{key}"
+
     def delete_story_files(self, story_id: str) -> None:
         """Delete all files associated with a story."""
         # List and delete audio files

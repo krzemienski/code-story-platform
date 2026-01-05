@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowRight, Loader2, Github, Sparkles, Volume2, ChevronDown, Play } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -13,6 +13,7 @@ import { Orb } from "@/components/ui/orb"
 import { Waveform } from "@/components/ui/waveform"
 import { ProcessingLogs } from "@/components/processing-logs"
 import { createClient } from "@/lib/supabase/client"
+import { useStoryWebSocket } from "@/hooks/use-story-websocket"
 
 type GeneratorStep = "input" | "options" | "generating" | "complete"
 
@@ -45,6 +46,19 @@ const VOICES = [
   { id: "EXAVITQu4vr4xnSDxMaL", name: "Bella", desc: "Friendly" },
   { id: "ErXwobaYiN019PkySvjV", name: "Antoni", desc: "Clear, precise" },
 ]
+
+// Map status to user-friendly progress messages
+function getProgressMessage(status: string, progress: number): string {
+  const messages: Record<string, string> = {
+    pending: "Queued for processing...",
+    analyzing: "Analyzing repository structure...",
+    generating: "Creating narrative script...",
+    synthesizing: "Synthesizing audio...",
+    completed: "Complete!",
+    failed: "Generation failed",
+  }
+  return messages[status] || `Processing... ${progress}%`
+}
 
 export function StoryGenerator() {
   const router = useRouter()
@@ -161,37 +175,37 @@ export function StoryGenerator() {
     }
   }
 
-  // Poll for progress
-  useEffect(() => {
-    if (!storyId || step !== "generating") return
+  // WebSocket callbacks for real-time progress
+  const handleProgress = useCallback(
+    (data: { status: string; progress: number }) => {
+      setProgress(data.progress)
+      setProgressMessage(getProgressMessage(data.status, data.progress))
+    },
+    []
+  )
 
-    const supabase = createClient()
-    const interval = setInterval(async () => {
-      const { data } = await supabase
-        .from("stories")
-        .select("status, progress, progress_message, audio_url, audio_chunks")
-        .eq("id", storyId)
-        .single()
+  const handleComplete = useCallback(
+    (data: { audioUrl: string; audioChunks: string[]; duration: number }) => {
+      setIsComplete(true)
+      setAudioUrl(data.audioChunks?.[0] || data.audioUrl)
+      setStep("complete")
+    },
+    []
+  )
 
-      if (data) {
-        setProgress(data.progress || 0)
-        setProgressMessage(data.progress_message || "Processing...")
+  const handleError = useCallback((message: string) => {
+    setError(message || "Generation failed. Please try again.")
+    setStep("options")
+  }, [])
 
-        if (data.status === "completed") {
-          clearInterval(interval)
-          setIsComplete(true)
-          setAudioUrl(data.audio_chunks?.[0] || data.audio_url)
-          setStep("complete")
-        } else if (data.status === "failed") {
-          clearInterval(interval)
-          setError("Generation failed. Please try again.")
-          setStep("options")
-        }
-      }
-    }, 2000)
-
-    return () => clearInterval(interval)
-  }, [storyId, step])
+  // Connect to WebSocket for real-time progress updates
+  useStoryWebSocket({
+    storyId,
+    enabled: step === "generating",
+    onProgress: handleProgress,
+    onComplete: handleComplete,
+    onError: handleError,
+  })
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !isValidating) {
