@@ -1,7 +1,9 @@
 "use client"
 
+import type React from "react"
+
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Logo } from "@/components/logo"
 import { UserMenu } from "@/components/user-menu"
 import { Menu, X, Sparkles, Headphones, Radio } from "lucide-react"
@@ -16,14 +18,38 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const pathname = usePathname()
+  const router = useRouter()
   const { currentItem, isPlaying, setPlayerExpanded, isPlayerVisible } = useAudioPlayerContext()
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const isActive = (path: string) => pathname === path
+
+  const handleCreateTale = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (pathname === "/") {
+      // Already on home page, just scroll to section
+      const element = document.getElementById("generate")
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" })
+      }
+    } else {
+      // Navigate to home page with hash
+      router.push("/#generate")
+    }
+    setMobileMenuOpen(false)
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -33,7 +59,7 @@ export function Navbar() {
             <Logo />
           </Link>
 
-          {/* Desktop nav links - Updated to use "Tales" terminology */}
+          {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-1">
             <Link
               href="/discover"
@@ -108,11 +134,9 @@ export function Navbar() {
           >
             GitHub
           </Link>
-          <Button asChild size="sm" className="bg-primary hover:bg-primary/90">
-            <Link href="/#generate">
-              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-              Create Tale
-            </Link>
+          <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={handleCreateTale}>
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+            Create Tale
           </Button>
           <UserMenu />
         </div>
@@ -127,7 +151,7 @@ export function Navbar() {
         </button>
       </nav>
 
-      {/* Mobile menu - Updated terminology */}
+      {/* Mobile menu */}
       <div
         className={cn(
           "overflow-hidden border-b border-border/50 bg-background transition-all duration-300 md:hidden",
@@ -201,11 +225,9 @@ export function Navbar() {
             GitHub
           </Link>
           <div className="pt-3 mt-2 border-t border-border">
-            <Button asChild className="w-full bg-primary hover:bg-primary/90">
-              <Link href="/#generate" onClick={() => setMobileMenuOpen(false)}>
-                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                Create Tale
-              </Link>
+            <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleCreateTale}>
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+              Create Tale
             </Button>
           </div>
           <div className="pt-2">

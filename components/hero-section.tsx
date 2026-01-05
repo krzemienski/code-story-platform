@@ -17,11 +17,22 @@ export function HeroSection() {
 
   const handleGenerate = () => {
     if (!isValid) return
-    window.location.href = `/dashboard/new?url=${encodeURIComponent(url.trim())}`
+    // Store the URL in sessionStorage and scroll to generator
+    sessionStorage.setItem("pendingRepoUrl", url.trim())
+    const generatorElement = document.getElementById("generate")
+    if (generatorElement) {
+      generatorElement.scrollIntoView({ behavior: "smooth" })
+    } else {
+      // If not on home page, redirect to home with the URL
+      window.location.href = `/?repo=${encodeURIComponent(url.trim())}#generate`
+    }
   }
 
   return (
-    <section className="min-h-[90vh] flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-16 relative overflow-hidden">
+    <section
+      id="generate"
+      className="min-h-[90vh] flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-16 relative overflow-hidden"
+    >
       {/* Animated background elements */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-3xl parallax-slow" />
@@ -35,7 +46,7 @@ export function HeroSection() {
           <TaliMascot size="lg" speaking mood="excited" />
         </div>
 
-        {/* Main headline - Fixed "Tail" to "Tale" */}
+        {/* Main headline */}
         <h1 className="text-5xl sm:text-6xl lg:text-7xl font-serif mb-6 leading-tight">
           Generate Your Own
           <br />
@@ -47,7 +58,7 @@ export function HeroSection() {
           explore like an adventure.
         </p>
 
-        {/* Create Your Tale Form - Fixed button text */}
+        {/* Create Your Tale Form */}
         <div className="max-w-2xl mx-auto mb-12">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -78,7 +89,7 @@ export function HeroSection() {
           )}
         </div>
 
-        {/* How it works pills - Fixed "Tail" to "Tale" */}
+        {/* How it works pills */}
         <div className="flex flex-wrap justify-center gap-4 mb-12">
           <div className="flex items-center gap-2 px-5 py-3 rounded-full bg-card/80 border border-border backdrop-blur-sm">
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
@@ -100,7 +111,7 @@ export function HeroSection() {
           </div>
         </div>
 
-        {/* Tale Types Preview - Color coded by style */}
+        {/* Tale Types Preview */}
         <div className="mb-8">
           <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider">Choose your experience:</p>
           <div className="flex flex-wrap justify-center gap-2">

@@ -1,6 +1,6 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
-let client: ReturnType<typeof createSupabaseClient> | null = null
+let browserClient: ReturnType<typeof createSupabaseClient> | null = null
 
 function isStorageAvailable(): boolean {
   try {
@@ -55,17 +55,11 @@ function createStorageAdapter() {
 }
 
 export function createClient() {
-  if (typeof window === "undefined") {
-    // Server-side: use singleton
-    if (client) return client
-  }
-
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   // Skip client creation during build time if env vars are missing
   if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === "placeholder") {
-    // Return a mock client that does nothing during build
     return {
       auth: {
         getUser: async () => ({ data: { user: null }, error: null }),
@@ -95,22 +89,31 @@ export function createClient() {
     } as unknown as ReturnType<typeof createSupabaseClient>
   }
 
-  const newClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      storage: typeof window !== "undefined" ? createStorageAdapter() : undefined,
-    },
-  })
+  if (typeof window !== "undefined") {
+    if (browserClient) return browserClient
 
-  if (typeof window === "undefined") {
-    client = newClient
+    browserClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: createStorageAdapter(),
+        flowType: "pkce",
+      },
+    })
+
+    return browserClient
   }
 
-  return newClient
+  // Server-side: always create new client (no singleton)
+  return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
 }
 
 export function clearClient() {
-  client = null
+  browserClient = null
 }

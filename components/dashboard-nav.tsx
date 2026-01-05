@@ -45,8 +45,7 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
     }
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push("/")
-    router.refresh()
+    window.location.href = "/"
   }
 
   const handleSearch = (e: React.FormEvent) => {
@@ -54,6 +53,12 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
     if (searchQuery.trim()) {
       router.push(`/discover?q=${encodeURIComponent(searchQuery)}`)
     }
+  }
+
+  const handleNewStory = (e: React.MouseEvent) => {
+    e.preventDefault()
+    router.push("/#generate")
+    setMobileMenuOpen(false)
   }
 
   const navItems = [
@@ -141,11 +146,9 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
             <Github className="h-4 w-4" />
           </a>
 
-          <Button asChild size="sm" className="hidden sm:flex bg-primary hover:bg-primary/90">
-            <Link href="/#generate">
-              <Plus className="mr-2 h-4 w-4" />
-              New Story
-            </Link>
+          <Button size="sm" className="hidden sm:flex bg-primary hover:bg-primary/90" onClick={handleNewStory}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Story
           </Button>
 
           <DropdownMenu>
@@ -276,11 +279,9 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
             GitHub
           </a>
 
-          <Button asChild size="sm" className="mt-2 bg-primary hover:bg-primary/90">
-            <Link href="/#generate" onClick={() => setMobileMenuOpen(false)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Story
-            </Link>
+          <Button size="sm" className="mt-2 bg-primary hover:bg-primary/90" onClick={handleNewStory}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Story
           </Button>
         </div>
       </div>
