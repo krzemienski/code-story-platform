@@ -1,93 +1,16 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
-
-let browserClient: ReturnType<typeof createSupabaseClient> | null = null
-let storageAvailable: boolean | null = null
-
-function checkStorageAvailability(): boolean {
-  if (typeof window === "undefined") return false
-  if (storageAvailable !== null) return storageAvailable
-
-  try {
-    // Use a getter to avoid immediate property access errors
-    const storage = "localStorage" in window ? window.localStorage : null
-    if (!storage) {
-      storageAvailable = false
-      return false
-    }
-    const test = "__storage_test__"
-    storage.setItem(test, test)
-    storage.removeItem(test)
-    storageAvailable = true
-    return true
-  } catch {
-    storageAvailable = false
-    return false
-  }
-}
-
-try {
-  if (typeof window !== "undefined") {
-    checkStorageAvailability()
-  }
-} catch {
-  storageAvailable = false
-}
+let browserClient: ReturnType<typeof import("@supabase/supabase-js").createClient> | null = null
+let clientPromise: Promise<ReturnType<typeof import("@supabase/supabase-js").createClient>> | null = null
 
 const memoryStorage: Record<string, string> = {}
 
 const safeStorage = {
   getItem: (key: string): string | null => {
-    if (typeof window === "undefined") return memoryStorage[key] ?? null
-    if (storageAvailable === false) return memoryStorage[key] ?? null
-
-    try {
-      const storage = "localStorage" in window ? window.localStorage : null
-      if (storage) return storage.getItem(key)
-    } catch {
-      // Silently fall through
-    }
     return memoryStorage[key] ?? null
   },
   setItem: (key: string, value: string): void => {
-    if (typeof window === "undefined") {
-      memoryStorage[key] = value
-      return
-    }
-    if (storageAvailable === false) {
-      memoryStorage[key] = value
-      return
-    }
-
-    try {
-      const storage = "localStorage" in window ? window.localStorage : null
-      if (storage) {
-        storage.setItem(key, value)
-        return
-      }
-    } catch {
-      // Silently fall through
-    }
     memoryStorage[key] = value
   },
   removeItem: (key: string): void => {
-    if (typeof window === "undefined") {
-      delete memoryStorage[key]
-      return
-    }
-    if (storageAvailable === false) {
-      delete memoryStorage[key]
-      return
-    }
-
-    try {
-      const storage = "localStorage" in window ? window.localStorage : null
-      if (storage) {
-        storage.removeItem(key)
-        return
-      }
-    } catch {
-      // Silently fall through
-    }
     delete memoryStorage[key]
   },
 }
@@ -101,11 +24,15 @@ function createMockClient() {
       signOut: async () => ({ error: null }),
       signInWithPassword: async () => ({
         data: { user: null, session: null },
-        error: { message: "Storage access is restricted in this context" },
+        error: { message: "Storage access blocked. Please disable browser extensions blocking storage." },
       }),
       signUp: async () => ({
         data: { user: null, session: null },
-        error: { message: "Storage access is restricted in this context" },
+        error: { message: "Storage access blocked. Please disable browser extensions blocking storage." },
+      }),
+      signInWithOAuth: async () => ({
+        data: { provider: null, url: null },
+        error: { message: "Storage access blocked. Please disable browser extensions blocking storage." },
       }),
       resetPasswordForEmail: async () => ({ data: {}, error: null }),
       updateUser: async () => ({ data: { user: null }, error: null }),
@@ -126,10 +53,10 @@ function createMockClient() {
       delete: () => ({ eq: () => ({ data: null, error: null }), data: null, error: null }),
     }),
     rpc: async () => ({ data: null, error: null }),
-  } as unknown as ReturnType<typeof createSupabaseClient>
+  } as unknown as ReturnType<typeof import("@supabase/supabase-js").createClient>
 }
 
-export function createClient() {
+export async function getSupabaseClient(): Promise<ReturnType<typeof import("@supabase/supabase-js").createClient>> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -137,37 +64,57 @@ export function createClient() {
     return createMockClient()
   }
 
-  if (typeof window !== "undefined") {
-    if (browserClient) return browserClient
-
-    const canUseStorage = storageAvailable === true
-
-    try {
-      browserClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          persistSession: canUseStorage,
-          autoRefreshToken: canUseStorage,
-          detectSessionInUrl: canUseStorage,
-          storage: safeStorage,
-          flowType: "pkce",
-        },
-      })
-
-      return browserClient
-    } catch (error) {
-      console.warn("[v0] Supabase client creation failed, using mock client:", error)
-      return createMockClient()
-    }
+  // Server-side: always create new client without persistence
+  if (typeof window === "undefined") {
+    const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
+    return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
   }
 
-  return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  })
+  // Return cached client if available
+  if (browserClient) return browserClient
+
+  // If already creating, wait for it
+  if (clientPromise) return clientPromise
+
+  // Create the client lazily
+  clientPromise = (async () => {
+    try {
+      const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
+      browserClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storage: safeStorage,
+          flowType: "pkce",
+          storageKey: "sb-auth-token",
+        },
+      })
+      return browserClient
+    } catch {
+      return createMockClient()
+    }
+  })()
+
+  return clientPromise
+}
+
+export function createClient(): ReturnType<typeof import("@supabase/supabase-js").createClient> {
+  // Trigger async creation but don't wait
+  if (typeof window !== "undefined" && !browserClient && !clientPromise) {
+    getSupabaseClient()
+  }
+
+  // Return cached client or mock
+  return browserClient ?? createMockClient()
 }
 
 export function clearClient() {
   browserClient = null
+  clientPromise = null
 }

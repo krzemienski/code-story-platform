@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Plus, Settings, LogOut, Menu, X, Headphones, Compass, Github, Search, Radio } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { createClient } from "@/lib/supabase/client"
+import { getSupabaseClient } from "@/lib/supabase/client"
 import { useState } from "react"
 import type { Profile } from "@/lib/types"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -43,7 +43,7 @@ export function DashboardNav({ user, profile, isDemo }: DashboardNavProps) {
       router.refresh()
       return
     }
-    const supabase = createClient()
+    const supabase = await getSupabaseClient()
     await supabase.auth.signOut()
     window.location.href = "/"
   }

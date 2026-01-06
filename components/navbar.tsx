@@ -10,7 +10,7 @@ import { Menu, X, Sparkles, Headphones, Radio } from "lucide-react"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/client"
+import { getSupabaseClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
 import { useAudioPlayerContext } from "@/lib/audio-player-context"
 
@@ -22,16 +22,29 @@ export function Navbar() {
   const { currentItem, isPlaying, setPlayerExpanded, isPlayerVisible } = useAudioPlayerContext()
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    let mounted = true
+    let unsubscribe: (() => void) | undefined
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
+    getSupabaseClient().then((supabase) => {
+      if (!mounted) return
+
+      supabase.auth.getUser().then(({ data }) => {
+        if (mounted) setUser(data.user)
+      })
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (mounted) setUser(session?.user ?? null)
+      })
+
+      unsubscribe = () => subscription.unsubscribe()
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      unsubscribe?.()
+    }
   }, [])
 
   const isActive = (path: string) => pathname === path

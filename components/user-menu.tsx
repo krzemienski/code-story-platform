@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { getSupabaseClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,28 +24,36 @@ export function UserMenu() {
   const [authTab, setAuthTab] = useState<"signin" | "signup">("signin")
 
   useEffect(() => {
-    const supabase = createClient()
+    let mounted = true
+    let unsubscribe: (() => void) | undefined
 
-    const getUser = async () => {
+    getSupabaseClient().then((supabase) => {
+      if (!mounted) return
+
+      supabase.auth.getUser().then(({ data }) => {
+        if (mounted) {
+          setUser(data.user)
+          setLoading(false)
+        }
+      })
+
       const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setUser(user)
-      setLoading(false)
-    }
-    getUser()
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (mounted) setUser(session?.user ?? null)
+      })
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
+      unsubscribe = () => subscription.unsubscribe()
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      unsubscribe?.()
+    }
   }, [])
 
   const handleSignOut = async () => {
-    const supabase = createClient()
+    const supabase = await getSupabaseClient()
     await supabase.auth.signOut()
     window.location.href = "/"
   }

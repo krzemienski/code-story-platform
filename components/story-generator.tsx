@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card"
 import { Orb } from "@/components/ui/orb"
 import { Waveform } from "@/components/ui/waveform"
 import { ProcessingLogs } from "@/components/processing-logs"
-import { createClient } from "@/lib/supabase/client"
+import { getSupabaseClient } from "@/lib/supabase/client"
 import { GenerationConfigPanel, useGenerationConfig } from "@/components/generation-config"
 import { GenerationModeSelector } from "@/components/generation-mode-selector"
 import { AI_MODELS, recommendModel } from "@/lib/ai/models"
@@ -145,7 +145,7 @@ export function StoryGenerator() {
     setProgressMessage("Starting...")
 
     try {
-      const supabase = createClient()
+      const supabase = await getSupabaseClient()
       const durationMinutes = DURATIONS.find((d) => d.id === duration)?.minutes || 10
 
       // Create repository record (no user required for public tales)
@@ -217,32 +217,49 @@ export function StoryGenerator() {
   useEffect(() => {
     if (!storyId || step !== "generating") return
 
-    const supabase = createClient()
-    const interval = setInterval(async () => {
-      const { data } = await supabase
-        .from("stories")
-        .select("status, progress, progress_message, audio_url, audio_chunks")
-        .eq("id", storyId)
-        .single()
+    let mounted = true
 
-      if (data) {
-        setProgress(data.progress || 0)
-        setProgressMessage(data.progress_message || "Processing...")
+    const pollStatus = async () => {
+      const supabase = await getSupabaseClient()
 
-        if (data.status === "completed") {
-          clearInterval(interval)
-          setIsComplete(true)
-          setAudioUrl(data.audio_chunks?.[0] || data.audio_url)
-          setStep("complete")
-        } else if (data.status === "failed") {
-          clearInterval(interval)
-          setError("Generation failed. Please try again.")
-          setStep("options")
+      const interval = setInterval(async () => {
+        if (!mounted) return
+
+        const { data } = await supabase
+          .from("stories")
+          .select("status, progress, progress_message, audio_url, audio_chunks")
+          .eq("id", storyId)
+          .single()
+
+        if (data && mounted) {
+          setProgress(data.progress || 0)
+          setProgressMessage(data.progress_message || "Processing...")
+
+          if (data.status === "completed") {
+            clearInterval(interval)
+            setIsComplete(true)
+            setAudioUrl(data.audio_chunks?.[0] || data.audio_url)
+            setStep("complete")
+          } else if (data.status === "failed") {
+            clearInterval(interval)
+            setError("Generation failed. Please try again.")
+            setStep("options")
+          }
         }
-      }
-    }, 2000)
+      }, 2000)
 
-    return () => clearInterval(interval)
+      return interval
+    }
+
+    let intervalId: NodeJS.Timeout | undefined
+    pollStatus().then((id) => {
+      intervalId = id
+    })
+
+    return () => {
+      mounted = false
+      if (intervalId) clearInterval(intervalId)
+    }
   }, [storyId, step])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

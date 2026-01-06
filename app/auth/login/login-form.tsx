@@ -1,14 +1,12 @@
 "use client"
 
 import type React from "react"
-
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
 import { Logo } from "@/components/logo"
 import { setDemoMode } from "@/lib/demo-mode"
@@ -22,29 +20,35 @@ export function LoginForm() {
 
   const redirectTo = searchParams.get("redirect") || "/dashboard"
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const supabase = createClient()
-    setIsLoading(true)
-    setError(null)
+  const handleLogin = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      setIsLoading(true)
+      setError(null)
 
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-      if (error) throw error
-      window.location.href = redirectTo
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
-      setIsLoading(false)
-    }
-  }
+      try {
+        const { createClient } = await import("@/lib/supabase/client")
+        const supabase = createClient()
 
-  const handleDemoMode = () => {
+        const { error: authError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+
+        if (authError) throw authError
+        window.location.href = redirectTo
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "An error occurred during sign in")
+        setIsLoading(false)
+      }
+    },
+    [email, password, redirectTo],
+  )
+
+  const handleDemoMode = useCallback(() => {
     setDemoMode(true)
     window.location.href = redirectTo
-  }
+  }, [redirectTo])
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4">

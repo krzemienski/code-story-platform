@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Waveform } from "@/components/ui/waveform"
 import { Orb } from "@/components/ui/orb"
-import { createClient } from "@/lib/supabase/client"
+import { getSupabaseClient } from "@/lib/supabase/client"
 import type { StoryChapter } from "@/lib/types"
 
 interface StoryPlayerProps {
@@ -28,7 +28,7 @@ interface StoryPlayerProps {
   title: string
   subtitle?: string
   audioUrl?: string
-  audioChunks?: string[] // Added array of audio chunk URLs
+  audioChunks?: string[]
   chapters?: StoryChapter[]
   initialPosition?: number
   scriptText?: string
@@ -41,7 +41,7 @@ export function StoryPlayer({
   title,
   subtitle,
   audioUrl,
-  audioChunks = [], // Default to empty array
+  audioChunks = [],
   chapters = [],
   initialPosition = 0,
   scriptText,
@@ -91,7 +91,6 @@ export function StoryPlayer({
         }
         accumulated += chunkDurations[i]
       }
-      // If beyond all chunks, return last chunk at end
       return {
         chunkIndex: Math.max(0, chunkDurations.length - 1),
         localTime: chunkDurations[chunkDurations.length - 1] || 0,
@@ -106,11 +105,10 @@ export function StoryPlayer({
     return currentTime >= ch.start_time_seconds && currentTime < chapterEnd
   })
 
-  // Save playback position to database (skip in demo mode)
   const savePosition = useCallback(
     async (position: number) => {
       if (isDemo) return
-      const supabase = createClient()
+      const supabase = await getSupabaseClient()
       await supabase
         .from("stories")
         .update({
@@ -122,7 +120,6 @@ export function StoryPlayer({
     [storyId, isDemo],
   )
 
-  // Debounced save
   const debouncedSavePosition = useCallback(
     (position: number) => {
       if (isDemo) return
@@ -157,19 +154,19 @@ export function StoryPlayer({
       for (const url of effectiveAudioChunks) {
         try {
           const audio = new Audio()
-          await new Promise<void>((resolve, reject) => {
+          await new Promise<void>((resolve) => {
             audio.onloadedmetadata = () => {
               durations.push(audio.duration)
               resolve()
             }
             audio.onerror = () => {
-              durations.push(180) // Fallback 3 min per chunk
+              durations.push(180)
               resolve()
             }
             audio.src = url
           })
         } catch {
-          durations.push(180) // Fallback
+          durations.push(180)
         }
       }
 
@@ -180,15 +177,15 @@ export function StoryPlayer({
     loadDurations()
   }, [effectiveAudioChunks])
 
-  // Increment play count on first play (skip in demo mode)
   useEffect(() => {
     if (isDemo) return
     if (isPlaying && currentTime < 5) {
-      const supabase = createClient()
-      supabase.rpc("increment_play_count", { story_id: storyId }).then(({ error }) => {
-        if (error) {
-          console.log("[v0] RPC not available, skipping play count")
-        }
+      getSupabaseClient().then((supabase) => {
+        supabase.rpc("increment_play_count", { story_id: storyId }).then(({ error }) => {
+          if (error) {
+            console.log("[v0] RPC not available, skipping play count")
+          }
+        })
       })
     }
   }, [isPlaying, currentTime, storyId, isDemo])
@@ -209,7 +206,6 @@ export function StoryPlayer({
       }
       setIsPlaying(!isPlaying)
     } else if (effectiveAudioChunks.length === 0) {
-      // Demo mode or no audio - just toggle state
       setIsPlaying(!isPlaying)
     }
   }
@@ -234,11 +230,9 @@ export function StoryPlayer({
 
   const handleChunkEnded = async () => {
     if (currentChunkIndex < effectiveAudioChunks.length - 1) {
-      // More chunks to play
       setIsLoadingChunk(true)
       setCurrentChunkIndex(currentChunkIndex + 1)
 
-      // Wait for audio element to update src and then play
       setTimeout(() => {
         if (audioRef.current) {
           audioRef.current.play()
@@ -246,7 +240,6 @@ export function StoryPlayer({
         setIsLoadingChunk(false)
       }, 100)
     } else {
-      // All chunks finished
       setIsPlaying(false)
       savePosition(totalDuration)
     }
@@ -259,7 +252,6 @@ export function StoryPlayer({
       const { chunkIndex, localTime } = findChunkForTime(newGlobalTime)
 
       if (chunkIndex !== currentChunkIndex) {
-        // Need to switch chunks
         setCurrentChunkIndex(chunkIndex)
         setTimeout(() => {
           if (audioRef.current) {
@@ -315,7 +307,6 @@ export function StoryPlayer({
       URL.revokeObjectURL(blobUrl)
     } catch (error) {
       console.error("[v0] Download failed:", error)
-      // Fallback to first chunk only
       window.open(effectiveAudioChunks[0], "_blank")
     }
   }
