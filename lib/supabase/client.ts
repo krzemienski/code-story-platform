@@ -3,18 +3,20 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 let browserClient: ReturnType<typeof createSupabaseClient> | null = null
 let storageAvailable: boolean | null = null
 
-function isStorageAvailable(): boolean {
+function checkStorageAvailability(): boolean {
   if (typeof window === "undefined") return false
   if (storageAvailable !== null) return storageAvailable
 
   try {
-    if (!window.localStorage) {
+    // Use a getter to avoid immediate property access errors
+    const storage = "localStorage" in window ? window.localStorage : null
+    if (!storage) {
       storageAvailable = false
       return false
     }
     const test = "__storage_test__"
-    window.localStorage.setItem(test, test)
-    window.localStorage.removeItem(test)
+    storage.setItem(test, test)
+    storage.removeItem(test)
     storageAvailable = true
     return true
   } catch {
@@ -23,38 +25,68 @@ function isStorageAvailable(): boolean {
   }
 }
 
+try {
+  if (typeof window !== "undefined") {
+    checkStorageAvailability()
+  }
+} catch {
+  storageAvailable = false
+}
+
 const memoryStorage: Record<string, string> = {}
 
 const safeStorage = {
   getItem: (key: string): string | null => {
-    if (storageAvailable) {
-      try {
-        return window.localStorage.getItem(key)
-      } catch {
-        // Fall through to memory
-      }
+    if (typeof window === "undefined") return memoryStorage[key] ?? null
+    if (storageAvailable === false) return memoryStorage[key] ?? null
+
+    try {
+      const storage = "localStorage" in window ? window.localStorage : null
+      if (storage) return storage.getItem(key)
+    } catch {
+      // Silently fall through
     }
     return memoryStorage[key] ?? null
   },
   setItem: (key: string, value: string): void => {
-    if (storageAvailable) {
-      try {
-        window.localStorage.setItem(key, value)
+    if (typeof window === "undefined") {
+      memoryStorage[key] = value
+      return
+    }
+    if (storageAvailable === false) {
+      memoryStorage[key] = value
+      return
+    }
+
+    try {
+      const storage = "localStorage" in window ? window.localStorage : null
+      if (storage) {
+        storage.setItem(key, value)
         return
-      } catch {
-        // Fall through to memory
       }
+    } catch {
+      // Silently fall through
     }
     memoryStorage[key] = value
   },
   removeItem: (key: string): void => {
-    if (storageAvailable) {
-      try {
-        window.localStorage.removeItem(key)
+    if (typeof window === "undefined") {
+      delete memoryStorage[key]
+      return
+    }
+    if (storageAvailable === false) {
+      delete memoryStorage[key]
+      return
+    }
+
+    try {
+      const storage = "localStorage" in window ? window.localStorage : null
+      if (storage) {
+        storage.removeItem(key)
         return
-      } catch {
-        // Fall through to memory
       }
+    } catch {
+      // Silently fall through
     }
     delete memoryStorage[key]
   },
@@ -101,7 +133,6 @@ export function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  // Skip client creation during build time if env vars are missing
   if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === "placeholder") {
     return createMockClient()
   }
@@ -109,14 +140,14 @@ export function createClient() {
   if (typeof window !== "undefined") {
     if (browserClient) return browserClient
 
-    const canUseStorage = isStorageAvailable()
+    const canUseStorage = storageAvailable === true
 
     try {
       browserClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
         auth: {
           persistSession: canUseStorage,
           autoRefreshToken: canUseStorage,
-          detectSessionInUrl: true,
+          detectSessionInUrl: canUseStorage,
           storage: safeStorage,
           flowType: "pkce",
         },
@@ -129,7 +160,6 @@ export function createClient() {
     }
   }
 
-  // Server-side: always create new client (no singleton)
   return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false,
