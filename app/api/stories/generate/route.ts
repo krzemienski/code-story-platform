@@ -6,11 +6,15 @@ import { analyzeRepository, summarizeRepoStructure } from "@/lib/agents/github"
 import { getStoryPrompt } from "@/lib/agents/prompts"
 import { log } from "@/lib/agents/log-helper"
 import { AI_MODELS, getModelConfiguration, getPromptOptimizations, recommendModel } from "@/lib/ai/models"
+import { generateAudioWithStudio, getRecommendedVoiceForStyle } from "@/lib/generation/elevenlabs-studio"
+import { type GenerationModeConfig, validateScriptLength } from "@/lib/generation/modes"
 
 export const maxDuration = 300 // 5 minutes max (Vercel limit)
 
 interface GenerateRequest {
   storyId: string
+  generationMode?: "hybrid" | "elevenlabs_studio"
+  modeConfig?: GenerationModeConfig
   modelConfig?: {
     modelId?: string
     temperature?: number
@@ -67,10 +71,12 @@ export async function POST(req: Request) {
   const TIMEOUT_WARNING_MS = 240000 // 4 minutes - warn before Vercel cuts us off
 
   try {
-    const { storyId, modelConfig }: GenerateRequest = await req.json()
+    const { storyId, generationMode, modeConfig, modelConfig }: GenerateRequest = await req.json()
 
     console.log("[v0] ====== TALE GENERATION STARTED ======")
     console.log("[v0] Tale ID:", storyId)
+    console.log("[v0] Generation Mode:", generationMode || "hybrid")
+    console.log("[v0] Mode Config:", modeConfig)
     console.log("[v0] Model Config:", modelConfig)
     console.log("[v0] Timestamp:", new Date().toISOString())
 
@@ -105,7 +111,11 @@ export async function POST(req: Request) {
     }
 
     const targetMinutes = story.target_duration_minutes || 15
-    let selectedModelId = modelConfig?.modelId || story.model_config?.modelId
+    const activeGenerationMode = generationMode || story.generation_mode || "hybrid"
+    const activeModeConfig = modeConfig || story.generation_config || {}
+
+    // Determine model based on mode and config
+    let selectedModelId = modelConfig?.modelId || activeModeConfig?.modelConfig?.modelId || story.model_config?.modelId
 
     // If no model specified, auto-recommend based on content
     if (!selectedModelId || !AI_MODELS[selectedModelId]?.isAvailable) {
@@ -129,6 +139,7 @@ export async function POST(req: Request) {
     }
 
     console.log("[v0] Tale loaded:", story.title)
+    console.log("[v0] Generation Mode:", activeGenerationMode)
     console.log("[v0] Using model:", modelDef.displayName, "(", selectedModelId, ")")
     console.log("[v0] Model config:", modelConfigData)
 
@@ -156,6 +167,7 @@ INTENT TYPE: ${intent.intent_category || "general"}`
       style: story.narrative_style,
       duration: story.target_duration_minutes,
       model: selectedModelId,
+      generationMode: activeGenerationMode,
     })
 
     try {
@@ -199,9 +211,9 @@ INTENT TYPE: ${intent.intent_category || "general"}`
         storyId,
         "Repository metadata retrieved",
         {
-          stars: analysis.metadata?.stargazers_count,
-          forks: analysis.metadata?.forks_count,
-          language: analysis.metadata?.language,
+          files: analysis.structure?.length || 0,
+          readme: !!analysis.readme,
+          languages: Object.keys(analysis.languages || {}),
         },
         "success",
       )
@@ -209,298 +221,259 @@ INTENT TYPE: ${intent.intent_category || "general"}`
       await supabase
         .from("stories")
         .update({
-          progress: 15,
-          progress_message: "Scanning directory structure...",
+          progress: 25,
+          progress_message: "Analyzing code structure...",
         })
         .eq("id", storyId)
 
-      await log.analyzer(storyId, "Scanning directory structure", {
-        totalFiles: analysis.structure.length,
-      })
+      // Get summarized structure for the prompt
+      const repoStructure = summarizeRepoStructure(analysis)
 
       await log.analyzer(
         storyId,
-        "Identified key directories",
+        "Code analysis complete",
         {
-          directories: analysis.keyDirectories.slice(0, 5),
+          structureLength: repoStructure.length,
         },
         "success",
       )
 
-      const repoSummary = summarizeRepoStructure(analysis)
-      console.log("[v0] Repo analysis complete, summary length:", repoSummary.length)
-
-      await log.analyzer(
-        storyId,
-        "Analysis complete",
-        {
-          filesAnalyzed: analysis.structure.length,
-          keyDirectories: analysis.keyDirectories.length,
-        },
-        "success",
-      )
-
-      // Cache analysis
-      await supabase
-        .from("code_repositories")
-        .update({
-          analysis_cache: analysis,
-          analysis_cached_at: new Date().toISOString(),
-        })
-        .eq("id", repo.id)
-
-      // ===== ARCHITECT AGENT =====
       await supabase
         .from("stories")
         .update({
-          status: "generating",
-          progress: 30,
-          progress_message: "Building architecture map...",
+          progress: 35,
+          progress_message: "Preparing AI context...",
         })
         .eq("id", storyId)
 
-      await log.architect(storyId, "Building dependency graph", {})
-
-      await log.architect(storyId, "Identifying core modules", {
-        modules: analysis.keyDirectories.slice(0, 4),
+      // ===== WRITER AGENT =====
+      await log.writer(storyId, "Preparing script generation prompt", {
+        model: selectedModelId,
+        style: story.narrative_style,
+        targetMinutes: targetMinutes,
+        targetWords: targetMinutes * 150,
       })
+
+      // Build the comprehensive prompt
+      const prompt = getStoryPrompt({
+        repoName: repo.repo_name,
+        repoOwner: repo.repo_owner,
+        description: repo.description || "A software project",
+        structure: repoStructure,
+        readme: analysis.readme || "",
+        narrativeStyle: story.narrative_style,
+        targetDurationMinutes: targetMinutes,
+        expertiseLevel: story.expertise_level || "intermediate",
+        additionalContext: intentContext,
+      })
+
+      // Add model-specific optimizations to the prompt
+      const fullPrompt = promptOptimizations.specialInstructions
+        ? `${prompt}\n\n${promptOptimizations.specialInstructions}`
+        : prompt
+
+      await log.writer(storyId, "Prompt prepared", {
+        promptLength: fullPrompt.length,
+        hasModelOptimizations: !!promptOptimizations.specialInstructions,
+      })
+
+      console.log("[v0] Prompt prepared, length:", fullPrompt.length)
 
       await supabase
         .from("stories")
         .update({
           progress: 40,
-          progress_message: "Mapping code patterns...",
+          progress_message: `Generating script with ${modelDef.displayName}...`,
         })
         .eq("id", storyId)
 
-      await log.architect(storyId, "Mapping data flow patterns", {})
-
-      await log.architect(
-        storyId,
-        "Architecture map complete",
-        {
-          components: analysis.keyDirectories.length,
-        },
-        "success",
-      )
-
-      // ===== NARRATOR AGENT =====
-      await supabase
-        .from("stories")
-        .update({
-          progress: 50,
-          progress_message: `Generating narrative with ${modelDef.displayName}...`,
-        })
-        .eq("id", storyId)
-
-      await log.narrator(storyId, "Generating narrative outline", {
-        style: story.narrative_style,
-        targetMinutes: story.target_duration_minutes,
-        model: modelDef.displayName,
-      })
-
-      const baseSystemPrompt = getStoryPrompt(story.narrative_style, story.expertise_level || "intermediate")
-      const systemPrompt = [
-        promptOptimizations.systemPromptPrefix,
-        baseSystemPrompt,
-        promptOptimizations.specialInstructions,
-        promptOptimizations.systemPromptSuffix,
-      ]
-        .filter(Boolean)
-        .join("\n\n")
-
-      const targetWords = targetMinutes * 150
-
-      console.log(
-        "[v0] Generating script with",
-        modelDef.displayName,
-        ", target words:",
-        targetWords,
-        "maxTokens:",
-        modelConfigData.maxTokens,
-      )
-
-      await log.narrator(storyId, `Writing script with ${modelDef.displayName}`, {
-        model: selectedModelId,
-        targetWords,
-        maxTokens: modelConfigData.maxTokens,
+      await log.writer(storyId, `Calling ${modelDef.displayName} for script generation`, {
         temperature: modelConfigData.temperature,
-        style: story.narrative_style,
+        maxTokens: modelConfigData.maxTokens,
       })
 
-      let script: string
-      try {
-        console.log("[v0] Calling AI API with model:", selectedModelId)
-        const result = await generateText({
-          model: selectedModelId, // AI Gateway handles routing
-          system: systemPrompt,
-          prompt: `Create an audio narrative script for the repository ${repo.repo_owner}/${repo.repo_name}.
+      // Generate the script using selected model
+      console.log("[v0] Calling AI model:", selectedModelId)
+      const { text: script } = await generateText({
+        model: selectedModelId,
+        prompt: fullPrompt,
+        temperature: modelConfigData.temperature,
+        maxTokens: modelConfigData.maxTokens,
+      })
 
-NARRATIVE STYLE: ${story.narrative_style.toUpperCase()}
-TARGET DURATION: ${targetMinutes} minutes (~${targetWords} words)
-USER'S INTENT: ${story.title}
-${intentContext}
-
-REPOSITORY ANALYSIS:
-${repoSummary}
-
-KEY DIRECTORIES TO COVER:
-${analysis.keyDirectories.slice(0, 15).join("\n")}
-
-CRITICAL INSTRUCTIONS:
-1. You MUST generate approximately ${targetWords} words - this is a ${targetMinutes}-minute audio experience
-2. Style is "${story.narrative_style}" - fully commit to this style throughout
-3. ${story.narrative_style === "fiction" ? "Create a complete fictional world with characters, plot, conflict, and resolution. Code components ARE your characters." : ""}
-4. Cover ALL major aspects of the codebase - do not rush or summarize
-5. Include natural pauses (...) for dramatic effect and breathing
-6. Organize into clear sections with smooth transitions
-7. Do NOT include any markdown headers or formatting - just natural prose with paragraph breaks
-8. Make it engaging enough that someone would want to listen for the full ${targetMinutes} minutes
-
-BEGIN YOUR ${targetMinutes}-MINUTE ${story.narrative_style.toUpperCase()} NARRATIVE NOW:`,
-          maxTokens: modelConfigData.maxTokens,
-          temperature: modelConfigData.temperature,
-          topP: modelConfigData.topP,
-          frequencyPenalty: modelConfigData.frequencyPenalty,
-          presencePenalty: modelConfigData.presencePenalty,
-        })
-        script = result.text
-        console.log("[v0] AI API call successful, generated", script.split(/\s+/).length, "words")
-
-        if (result.usage) {
-          console.log("[v0] Token usage:", result.usage)
-          await log.narrator(
-            storyId,
-            "Generation complete",
-            {
-              model: selectedModelId,
-              promptTokens: result.usage.promptTokens,
-              completionTokens: result.usage.completionTokens,
-              totalTokens: result.usage.totalTokens,
-            },
-            "success",
-          )
-        }
-      } catch (aiError) {
-        console.error("[v0] AI API error:", aiError)
-        await log.narrator(storyId, `${modelDef.displayName} API failed`, { error: String(aiError) }, "error")
-
-        await supabase
-          .from("stories")
-          .update({
-            status: "failed",
-            error_message: `AI API error (${modelDef.displayName}): ${aiError instanceof Error ? aiError.message : String(aiError)}`,
-            processing_completed_at: new Date().toISOString(),
-          })
-          .eq("id", storyId)
-
-        return Response.json({ error: "AI API failed", details: String(aiError) }, { status: 500 })
-      }
-
+      console.log("[v0] Script generated, length:", script.length)
       const actualWords = script.split(/\s+/).length
-      console.log("[v0] Script generated, actual words:", actualWords)
+      console.log("[v0] Word count:", actualWords)
 
-      await log.narrator(
+      const validation = validateScriptLength(actualWords, targetMinutes)
+      console.log("[v0] Script validation:", validation)
+
+      await log.writer(
         storyId,
-        "Script draft complete",
+        "Script generated successfully",
         {
+          length: script.length,
           words: actualWords,
           estimatedMinutes: Math.round(actualWords / 150),
-          model: modelDef.displayName,
+          validation: validation.message,
         },
         "success",
       )
 
-      await supabase
-        .from("stories")
-        .update({
-          progress: 60,
-          progress_message: "Structuring chapters...",
-          script_text: script,
+      // Parse chapters from script
+      const chapterMatches = script.matchAll(/(?:^|\n)(?:#{1,3}|Chapter\s+\d+[:\s]*|Part\s+\d+[:\s]*)\s*([^\n]+)/gi)
+      const chapters = []
+      let lastIndex = 0
+      for (const match of chapterMatches) {
+        if (match.index !== undefined) {
+          chapters.push({
+            number: chapters.length + 1,
+            title: match[1].trim(),
+            start_time_seconds: Math.round((lastIndex / script.length) * (actualWords / 2.5)),
+            duration_seconds: 0,
+          })
+          lastIndex = match.index
+        }
+      }
+
+      if (chapters.length === 0) {
+        chapters.push({
+          number: 1,
+          title: story.title || "Introduction",
+          start_time_seconds: 0,
+          duration_seconds: Math.round(actualWords / 2.5),
         })
-        .eq("id", storyId)
+      }
 
-      await log.narrator(storyId, "Generating chapter breakdown", {})
-
-      const chapterModelId = "openai/gpt-4o-mini" // Fast and cheap for structured output
-      const { text: chaptersJson } = await generateText({
-        model: chapterModelId,
-        prompt: `Given this narrative script, create a JSON array of chapters with titles and approximate timestamps.
-
-SCRIPT:
-${script.slice(0, 4000)}
-
-Output a JSON array like this (estimate timestamps based on ~150 words per minute):
-[
-  {"number": 1, "title": "Introduction", "start_time_seconds": 0, "duration_seconds": 120},
-  {"number": 2, "title": "Architecture Overview", "start_time_seconds": 120, "duration_seconds": 180},
-  ...
-]
-
-Output ONLY valid JSON, no other text:`,
-        maxTokens: 1000,
-        temperature: 0.3,
+      await log.writer(storyId, "Chapters parsed", {
+        count: chapters.length,
+        titles: chapters.map((c: { title: string }) => c.title),
       })
 
-      let chapters = []
-      try {
-        chapters = JSON.parse(chaptersJson.trim())
-        console.log("[v0] Chapters parsed:", chapters.length)
-        await log.narrator(
-          storyId,
-          "Chapters structured",
-          {
-            chapterCount: chapters.length,
-          },
-          "success",
-        )
-      } catch {
-        console.log("[v0] Chapter parsing failed, using single chapter")
-        chapters = [{ number: 1, title: "Full Narrative", start_time_seconds: 0, duration_seconds: targetMinutes * 60 }]
-        await log.narrator(storyId, "Using single chapter fallback", {}, "warning")
-      }
-
       await supabase
         .from("stories")
         .update({
+          script_text: script,
           chapters,
-          progress: 70,
-          progress_message: "Script complete. Preparing audio synthesis...",
+          progress: 75,
+          progress_message: "Script complete. Starting audio synthesis...",
         })
         .eq("id", storyId)
-
-      const elapsedMs = Date.now() - startTime
-      console.log("[v0] Elapsed time before audio synthesis:", Math.round(elapsedMs / 1000), "seconds")
-
-      if (elapsedMs > TIMEOUT_WARNING_MS) {
-        console.log("[v0] WARNING: Running low on time, may not complete audio synthesis")
-        await log.system(
-          storyId,
-          "Time warning - audio synthesis may be interrupted",
-          {
-            elapsedSeconds: Math.round(elapsedMs / 1000),
-            remainingSeconds: Math.round((300000 - elapsedMs) / 1000),
-          },
-          "warning",
-        )
-      }
 
       // ===== SYNTHESIZER AGENT =====
-      await supabase
-        .from("stories")
-        .update({
-          status: "synthesizing",
-          progress: 75,
-          progress_message: "Initializing ElevenLabs...",
-        })
-        .eq("id", storyId)
-
       const elevenLabsKey = process.env.ELEVENLABS_API_KEY
-      console.log("[v0] ElevenLabs key available:", !!elevenLabsKey)
 
       if (elevenLabsKey) {
-        const voiceId = story.voice_id || "21m00Tcm4TlvDq8ikWAM"
+        const voiceId = story.voice_id || getRecommendedVoiceForStyle(story.narrative_style)
 
+        if (activeGenerationMode === "elevenlabs_studio") {
+          // ===== ELEVENLABS STUDIO API MODE =====
+          await log.synthesizer(storyId, "Using ElevenLabs Studio API for audio production", {
+            format: activeModeConfig.studioFormat || "audiobook",
+            enableMusic: activeModeConfig.enableBackgroundMusic,
+            enableSFX: activeModeConfig.enableSoundEffects,
+          })
+
+          try {
+            await supabase
+              .from("stories")
+              .update({
+                progress: 78,
+                progress_message: "Creating ElevenLabs Studio project...",
+              })
+              .eq("id", storyId)
+
+            const studioResult = await generateAudioWithStudio({
+              name: `${repo.repo_name} - ${story.narrative_style}`,
+              content: script,
+              voiceId,
+              modelId: "eleven_multilingual_v2",
+              title: story.title,
+              author: repo.repo_owner,
+              qualityPreset: "high",
+              onProgress: async (stage, message, progress) => {
+                console.log(`[v0] Studio progress: ${stage} - ${message} (${progress}%)`)
+                await log.synthesizer(storyId, message, { stage, progress })
+                await supabase
+                  .from("stories")
+                  .update({
+                    progress: 78 + Math.round(progress * 0.17), // 78-95%
+                    progress_message: message,
+                  })
+                  .eq("id", storyId)
+              },
+            })
+
+            // Upload audio to Supabase storage
+            const fileName = `${storyId}_studio.mp3`
+            const audioBlob = new Blob([studioResult.audioBuffer], { type: "audio/mpeg" })
+
+            const { error: uploadError } = await supabase.storage.from("story-audio").upload(fileName, audioBlob, {
+              contentType: "audio/mpeg",
+              upsert: true,
+            })
+
+            if (uploadError) {
+              throw new Error(`Failed to upload audio: ${uploadError.message}`)
+            }
+
+            const {
+              data: { publicUrl },
+            } = supabase.storage.from("story-audio").getPublicUrl(fileName)
+
+            await log.synthesizer(
+              storyId,
+              "ElevenLabs Studio audio complete",
+              {
+                projectId: studioResult.projectId,
+                duration: studioResult.durationSeconds,
+                audioUrl: publicUrl,
+              },
+              "success",
+            )
+
+            await log.system(
+              storyId,
+              "Tale generation complete!",
+              {
+                totalDuration: studioResult.durationSeconds,
+                mode: "elevenlabs_studio",
+              },
+              "success",
+            )
+
+            await supabase
+              .from("stories")
+              .update({
+                audio_url: publicUrl,
+                audio_chunks: [publicUrl],
+                actual_duration_seconds: studioResult.durationSeconds,
+                status: "completed",
+                progress: 100,
+                progress_message: "Tale generated successfully with ElevenLabs Studio!",
+                processing_completed_at: new Date().toISOString(),
+              })
+              .eq("id", storyId)
+
+            return Response.json({
+              success: true,
+              audioUrl: publicUrl,
+              duration: studioResult.durationSeconds,
+              mode: "elevenlabs_studio",
+            })
+          } catch (studioError) {
+            console.error("[v0] ElevenLabs Studio error:", studioError)
+            await log.synthesizer(
+              storyId,
+              "Studio API failed, falling back to TTS",
+              { error: studioError instanceof Error ? studioError.message : "Unknown error" },
+              "warning",
+            )
+            // Fall through to standard TTS below
+          }
+        }
+
+        // ===== STANDARD TTS MODE (hybrid or fallback) =====
         const modelId = "eleven_flash_v2_5"
         const maxChunkSize = 10000 // Larger chunks for fewer API calls
 
@@ -746,6 +719,7 @@ Output ONLY valid JSON, no other text:`,
             {
               totalDuration: estimatedDuration,
               chapters: updatedChapters.length,
+              mode: "hybrid",
             },
             "success",
           )
@@ -775,6 +749,7 @@ Output ONLY valid JSON, no other text:`,
             audioUrl: mainAudioUrl,
             audioChunks: chapterAudioUrls,
             duration: estimatedDuration,
+            mode: "hybrid",
           })
         } catch (audioError) {
           console.error("[v0] Audio generation error:", audioError)

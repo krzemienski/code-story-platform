@@ -4,6 +4,7 @@ import { Inter, Playfair_Display, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AudioPlayerProvider } from "@/lib/audio-player-context"
 import { FloatingPlayer } from "@/components/floating-player"
+import { StorageErrorBoundary } from "@/components/storage-error-boundary"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
     title: "Code Tales",
     description: "Transform code repositories into audio stories",
   },
-    generator: 'v0.app'
+  generator: "v0.app",
 }
 
 export const viewport: Viewport = {
@@ -45,10 +46,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${inter.variable} ${playfair.variable} ${geistMono.variable}`}>
       <body className="font-sans antialiased bg-background">
-        <AudioPlayerProvider>
-          {children}
-          <FloatingPlayer />
-        </AudioPlayerProvider>
+        <StorageErrorBoundary>
+          <AudioPlayerProvider>
+            {children}
+            <FloatingPlayer />
+          </AudioPlayerProvider>
+        </StorageErrorBoundary>
         <Analytics />
       </body>
     </html>

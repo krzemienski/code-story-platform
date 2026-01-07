@@ -156,7 +156,7 @@ export default async function StoryPage({
             },
           ]
 
-  const isProcessing = !["complete", "failed"].includes(typedStory.status)
+  const isProcessing = !["completed", "failed"].includes(typedStory.status)
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -189,7 +189,7 @@ export default async function StoryPage({
             )}
           </div>
 
-          {typedStory.status === "complete" && (
+          {typedStory.status === "completed" && (
             <div className="flex gap-2">
               {typedStory.audio_url && (
                 <Button variant="outline" size="sm" className="bg-transparent" asChild>
@@ -232,7 +232,7 @@ export default async function StoryPage({
       )}
 
       {/* Completed state - Player */}
-      {typedStory.status === "complete" && (
+      {typedStory.status === "completed" && (
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <StoryPlayer

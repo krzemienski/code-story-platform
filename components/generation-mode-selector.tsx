@@ -1,11 +1,14 @@
 "use client"
+import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Wand2, Podcast, Info, Check } from "lucide-react"
+import { Wand2, Podcast, Info, Check, Settings2 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { type GenerationMode, type GenerationModeConfig, getRecommendedMode } from "@/lib/generation/modes"
+import { ModelSelector } from "@/components/model-selector"
 
 interface GenerationModeSelectorProps {
   mode: GenerationMode
@@ -22,6 +25,7 @@ export function GenerationModeSelector({
   onConfigChange,
   narrativeStyle,
 }: GenerationModeSelectorProps) {
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const recommendedMode = getRecommendedMode(narrativeStyle)
 
   const modes = [
@@ -29,17 +33,17 @@ export function GenerationModeSelector({
       id: "hybrid" as GenerationMode,
       name: "Hybrid (Claude + Voice)",
       icon: Wand2,
-      description: "Custom script generation with Claude AI, voiced by ElevenLabs",
+      description: "Custom script generation with Claude AI, voiced by ElevenLabs TTS",
       features: ["Advanced Prompt Control", "Custom Narratives", "Precise Language", "Long-form Content"],
       color: "blue",
       bestFor: "Fiction, tutorials, and technical deep-dives",
     },
     {
       id: "elevenlabs_studio" as GenerationMode,
-      name: "Full Studio",
+      name: "ElevenLabs Studio",
       icon: Podcast,
-      description: "Professional podcast production with AI-generated content and multi-voice support",
-      features: ["GenFM Podcast Engine", "Background Music", "Multiple Voices", "Sound Effects"],
+      description: "Full Studio API with professional podcast production pipeline",
+      features: ["Studio Project API", "Professional Quality", "Background Music", "Sound Effects"],
       color: "purple",
       bestFor: "Podcast-style conversational content",
     },
@@ -51,7 +55,7 @@ export function GenerationModeSelector({
     if (newMode === "hybrid") {
       onConfigChange({
         mode: "hybrid",
-        scriptModel: "claude-sonnet-4",
+        scriptModel: "anthropic/claude-sonnet-4-20250514",
         voiceSynthesis: "elevenlabs-tts",
         enableSoundEffects: false,
         enableBackgroundMusic: false,
@@ -78,8 +82,8 @@ export function GenerationModeSelector({
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
               <p>
-                <strong>Hybrid</strong> uses Claude for script writing with ElevenLabs for voice.
-                <strong> Full Studio</strong> uses ElevenLabs' complete production pipeline.
+                <strong>Hybrid</strong> uses Claude/GPT for script writing with ElevenLabs TTS.
+                <strong> ElevenLabs Studio</strong> uses the full Studio API for professional production.
               </p>
             </TooltipContent>
           </Tooltip>
@@ -152,7 +156,65 @@ export function GenerationModeSelector({
         })}
       </div>
 
-      {/* Studio-specific options */}
+      {/* Hybrid mode options */}
+      <AnimatePresence>
+        {mode === "hybrid" && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm">Script Generation Model</Label>
+                  <p className="text-xs text-muted-foreground">Choose AI model for script writing</p>
+                </div>
+                <ModelSelector
+                  selectedModel={config.scriptModel || "anthropic/claude-sonnet-4-20250514"}
+                  onSelectModel={(modelId) => onConfigChange({ ...config, scriptModel: modelId })}
+                  narrativeStyle={narrativeStyle}
+                  className="w-[200px]"
+                />
+              </div>
+
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <Settings2 className="h-3 w-3" />
+                {showAdvanced ? "Hide" : "Show"} advanced options
+              </button>
+
+              {showAdvanced && (
+                <div className="space-y-3 pt-2 border-t border-blue-500/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm">Voice Synthesis</Label>
+                      <p className="text-xs text-muted-foreground">Audio generation method</p>
+                    </div>
+                    <Select
+                      value={config.voiceSynthesis || "elevenlabs-tts"}
+                      onValueChange={(v) => onConfigChange({ ...config, voiceSynthesis: v })}
+                    >
+                      <SelectTrigger className="w-[160px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="elevenlabs-tts">ElevenLabs TTS</SelectItem>
+                        <SelectItem value="elevenlabs-studio">ElevenLabs Studio</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Studio mode options */}
       <AnimatePresence>
         {mode === "elevenlabs_studio" && (
           <motion.div
@@ -161,7 +223,51 @@ export function GenerationModeSelector({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="p-4 rounded-xl border border-purple-500/30 bg-purple-500/5 space-y-3">
+            <div className="p-4 rounded-xl border border-purple-500/30 bg-purple-500/5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm">Studio Format</Label>
+                  <p className="text-xs text-muted-foreground">Production style</p>
+                </div>
+                <Select
+                  value={config.studioFormat || "podcast"}
+                  onValueChange={(v) =>
+                    onConfigChange({ ...config, studioFormat: v as "podcast" | "audiobook" | "documentary" })
+                  }
+                >
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="podcast">Podcast</SelectItem>
+                    <SelectItem value="audiobook">Audiobook</SelectItem>
+                    <SelectItem value="documentary">Documentary</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm">Duration Target</Label>
+                  <p className="text-xs text-muted-foreground">Content length</p>
+                </div>
+                <Select
+                  value={config.studioDuration || "default"}
+                  onValueChange={(v) =>
+                    onConfigChange({ ...config, studioDuration: v as "short" | "default" | "long" })
+                  }
+                >
+                  <SelectTrigger className="w-[120px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="short">Short (~5 min)</SelectItem>
+                    <SelectItem value="default">Default (~15 min)</SelectItem>
+                    <SelectItem value="long">Long (~30 min)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-sm">Background Music</Label>
