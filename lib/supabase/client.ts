@@ -1,8 +1,7 @@
 "use client"
 
 let browserClient: ReturnType<typeof import("@supabase/supabase-js").createClient> | null = null
-let isCreating = false
-let createQueue: Array<(client: ReturnType<typeof import("@supabase/supabase-js").createClient>) => void> = []
+let clientCreationPromise: Promise<ReturnType<typeof import("@supabase/supabase-js").createClient>> | null = null
 
 // Memory storage - never touches localStorage
 const memoryStorage: Record<string, string> = {}
@@ -71,7 +70,39 @@ function createMockClient() {
   } as unknown as ReturnType<typeof import("@supabase/supabase-js").createClient>
 }
 
-const STORAGE_KEY = "codetales-auth-token"
+const STORAGE_KEY = "codetales-session"
+
+async function createBrowserClient(): Promise<ReturnType<typeof import("@supabase/supabase-js").createClient>> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === "placeholder") {
+    return createMockClient()
+  }
+
+  try {
+    const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
+
+    const client = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: safeStorage,
+        flowType: "pkce",
+        storageKey: STORAGE_KEY,
+      },
+      global: {
+        fetch: (...args) => fetch(...args),
+      },
+    })
+
+    return client
+  } catch (err) {
+    console.error("[CodeTales] Error creating auth client:", err)
+    return createMockClient()
+  }
+}
 
 export async function getSupabaseClient(): Promise<ReturnType<typeof import("@supabase/supabase-js").createClient>> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -97,56 +128,34 @@ export async function getSupabaseClient(): Promise<ReturnType<typeof import("@su
     return browserClient
   }
 
-  if (isCreating) {
-    return new Promise((resolve) => {
-      createQueue.push(resolve)
-    })
+  // If creation is in progress, wait for it
+  if (clientCreationPromise) {
+    return clientCreationPromise
   }
 
-  isCreating = true
+  // Create the client once
+  clientCreationPromise = createBrowserClient()
+  browserClient = await clientCreationPromise
+  clientCreationPromise = null
 
-  try {
-    const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
-
-    browserClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storage: safeStorage,
-        flowType: "pkce",
-        storageKey: STORAGE_KEY,
-      },
-    })
-
-    // Resolve all queued requests with the same client
-    createQueue.forEach((resolve) => resolve(browserClient!))
-    createQueue = []
-
-    return browserClient
-  } catch (err) {
-    console.error("[CodeTales] Error creating auth client:", err)
-    const mockClient = createMockClient()
-    createQueue.forEach((resolve) => resolve(mockClient))
-    createQueue = []
-    return mockClient
-  } finally {
-    isCreating = false
-  }
+  return browserClient
 }
 
 export function createClient(): ReturnType<typeof import("@supabase/supabase-js").createClient> {
-  if (typeof window !== "undefined" && !browserClient && !isCreating) {
-    // Trigger async creation but don't wait
-    getSupabaseClient()
+  // Return cached client if available
+  if (browserClient) {
+    return browserClient
   }
 
-  // Return cached client or mock
-  return browserClient || createMockClient()
+  // For synchronous calls, trigger async creation and return mock
+  if (typeof window !== "undefined") {
+    getSupabaseClient().catch(() => {})
+  }
+
+  return createMockClient()
 }
 
 export function clearClient() {
   browserClient = null
-  isCreating = false
-  createQueue = []
+  clientCreationPromise = null
 }

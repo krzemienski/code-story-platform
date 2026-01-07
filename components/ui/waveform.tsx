@@ -16,6 +16,31 @@ interface WaveformProps extends React.HTMLAttributes<HTMLDivElement> {
   onBarClick?: (index: number, value: number) => void
 }
 
+function getCanvasColor(barColor: string | undefined): string {
+  if (barColor) {
+    // If barColor is provided, check if it's already a full color format
+    if (
+      barColor.startsWith("oklch(") ||
+      barColor.startsWith("rgb") ||
+      barColor.startsWith("hsl") ||
+      barColor.startsWith("#")
+    ) {
+      return barColor
+    }
+    // Otherwise assume it's oklch values like "0.65 0 0"
+    return `oklch(${barColor})`
+  }
+
+  // Get computed style - this returns the full "oklch(0.95 0 0)" format
+  const computed = getComputedStyle(document.documentElement).getPropertyValue("--foreground").trim()
+  if (computed) {
+    // The CSS variable already contains the full oklch() format, use as-is
+    return computed
+  }
+
+  return "#fff"
+}
+
 export function Waveform({
   data = [],
   barWidth = 4,
@@ -51,9 +76,7 @@ export function Waveform({
     ctx.scale(dpr, dpr)
     ctx.clearRect(0, 0, rect.width, rect.height)
 
-    const color =
-      barColor || getComputedStyle(document.documentElement).getPropertyValue("--foreground").trim() || "#fff"
-    ctx.fillStyle = `oklch(${color})`
+    ctx.fillStyle = getCanvasColor(barColor)
 
     const totalBarWidth = barWidth + barGap
     const centerY = rect.height / 2
@@ -141,8 +164,7 @@ export function ScrollingWaveform({
     const draw = () => {
       ctx.clearRect(0, 0, rect.width, rect.height)
 
-      const color = barColor || "0.65 0 0"
-      ctx.fillStyle = `oklch(${color})`
+      ctx.fillStyle = getCanvasColor(barColor)
 
       const totalBarWidth = barWidth + barGap
       const centerY = rect.height / 2

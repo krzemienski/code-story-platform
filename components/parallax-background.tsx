@@ -20,7 +20,6 @@ export function ParallaxBackground() {
     }
 
     const animate = () => {
-      // Smooth interpolation for parallax
       currentScrollY += (targetScrollY - currentScrollY) * 0.1
 
       if (container) {
@@ -77,18 +76,11 @@ export function ParallaxBackground() {
         </video>
       </div>
 
-      {/* Purple overlay gradient to maintain brand colors */}
       <div
-        className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/90"
+        className="absolute inset-0"
         style={{
-          background: `linear-gradient(
-            to bottom,
-            hsl(var(--background) / 0.85) 0%,
-            hsl(var(--background) / 0.5) 30%,
-            hsl(var(--background) / 0.4) 50%,
-            hsl(var(--background) / 0.6) 70%,
-            hsl(var(--background) / 0.95) 100%
-          )`,
+          background:
+            "linear-gradient(to bottom, rgba(9,9,11,0.85) 0%, rgba(9,9,11,0.5) 30%, rgba(9,9,11,0.4) 50%, rgba(9,9,11,0.6) 70%, rgba(9,9,11,0.95) 100%)",
         }}
       />
 
@@ -107,20 +99,19 @@ export function ParallaxBackground() {
       />
       <div
         data-parallax="0.8"
-        className="absolute top-[30%] left-[20%] w-[500px] h-[500px] rounded-full bg-indigo-500/8 blur-[80px] animate-breathe"
+        className="absolute top-[30%] left-[20%] w-[500px] h-[500px] rounded-full bg-indigo-500/10 blur-[80px] animate-breathe"
         style={{ animationDelay: "4s" }}
       />
       <div
         data-parallax="0.5"
-        className="absolute top-[60%] right-[15%] w-[400px] h-[400px] rounded-full bg-fuchsia-500/8 blur-[90px] animate-breathe"
+        className="absolute top-[60%] right-[15%] w-[400px] h-[400px] rounded-full bg-fuchsia-500/10 blur-[90px] animate-breathe"
         style={{ animationDelay: "3s" }}
       />
 
-      {/* Subtle vignette effect */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(ellipse at center, transparent 0%, hsl(var(--background) / 0.4) 100%)`,
+          background: "radial-gradient(ellipse at center, transparent 0%, rgba(9,9,11,0.4) 100%)",
         }}
       />
     </div>
