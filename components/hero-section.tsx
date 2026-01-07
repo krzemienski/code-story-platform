@@ -155,11 +155,6 @@ export function HeroSection() {
     if (!repoInfo) return
 
     console.log("[v0] startGeneration: Starting generation...")
-    console.log("[v0] startGeneration: Repo info:", repoInfo)
-    console.log("[v0] startGeneration: Generation mode:", generationMode)
-    console.log("[v0] startGeneration: Mode config:", modeConfig)
-    console.log("[v0] startGeneration: Generation config:", generationConfig)
-
     setStep("generating")
     setProgress(0)
     setProgressMessage("Starting...")
@@ -171,94 +166,123 @@ export function HeroSection() {
       console.log("[v0] startGeneration: Supabase client obtained")
 
       const durationMinutes = DURATIONS.find((d) => d.id === duration)?.minutes || 10
-      console.log("[v0] startGeneration: Duration minutes:", durationMinutes)
 
-      // Create repository record
-      console.log("[v0] startGeneration: Creating repository record...")
+      console.log("[v0] startGeneration: Upserting repository record...")
       const { data: repo, error: repoError } = await supabase
         .from("code_repositories")
-        .insert({
-          repo_url: url,
-          repo_name: repoInfo.name,
-          repo_owner: repoInfo.owner,
-          primary_language: repoInfo.language,
-          stars_count: repoInfo.stars,
-          description: repoInfo.description,
-        })
+        .upsert(
+          {
+            repo_url: url,
+            repo_name: repoInfo.name,
+            repo_owner: repoInfo.owner,
+            primary_language: repoInfo.language,
+            stars_count: repoInfo.stars,
+            description: repoInfo.description,
+          },
+          { onConflict: "repo_url", ignoreDuplicates: false },
+        )
         .select()
         .single()
 
       if (repoError) {
-        console.error("[v0] startGeneration: Repository insert error:", repoError)
-        throw new Error(`Failed to create repository: ${repoError.message}`)
-      }
-      console.log("[v0] startGeneration: Repository created:", repo.id)
+        console.error("[v0] startGeneration: Repository upsert error:", repoError)
+        const { data: existingRepo, error: fetchError } = await supabase
+          .from("code_repositories")
+          .select()
+          .eq("repo_url", url)
+          .single()
 
-      console.log("[v0] startGeneration: Creating story record...")
-      const { data: story, error: storyError } = await supabase
-        .from("stories")
-        .insert({
-          repository_id: repo.id,
-          title: `${repoInfo.name}: Overview`,
-          narrative_style: style,
-          voice_id: voice,
-          target_duration_minutes: durationMinutes,
-          expertise_level: "intermediate",
-          status: "pending",
-          is_public: true,
-          progress: 0,
-          progress_message: "Queued...",
-          generation_mode: generationMode,
-          generation_config: {
-            ...modeConfig,
-            modelConfig: {
-              modelId: generationConfig.modelId,
-              temperature: generationConfig.temperature,
-              priority: generationConfig.priority,
-            },
-          },
-        })
-        .select()
-        .single()
-
-      if (storyError) {
-        console.error("[v0] startGeneration: Story insert error:", storyError)
-        throw new Error(`Failed to create story: ${storyError.message}`)
-      }
-      console.log("[v0] startGeneration: Story created:", story.id)
-
-      setStoryId(story.id)
-
-      // Start generation in background
-      console.log("[v0] startGeneration: Calling generate API...")
-      const response = await fetch("/api/stories/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storyId: story.id,
-          generationMode,
-          modeConfig,
-          modelConfig: {
-            modelId: generationConfig.modelId,
-            temperature: generationConfig.temperature,
-          },
-        }),
-      })
-
-      console.log("[v0] startGeneration: Generate API response status:", response.status)
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error("[v0] startGeneration: Generate API error:", errorText)
-        // Don't throw here - the generation happens in background
+        if (fetchError || !existingRepo) {
+          throw new Error(`Failed to create/find repository: ${repoError.message}`)
+        }
+        console.log("[v0] startGeneration: Using existing repository:", existingRepo.id)
+        // Use existing repo
+        const repoId = existingRepo.id
+        await createStory(supabase, repoId, durationMinutes)
+        return
       }
 
-      console.log("[v0] startGeneration: Generation initiated successfully")
+      console.log("[v0] startGeneration: Repository created/updated:", repo.id)
+      await createStory(supabase, repo.id, durationMinutes)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to start generation"
       console.error("[v0] startGeneration: Error:", message, err)
       setError(message)
       setStep("options")
     }
+  }
+
+  const createStory = async (
+    supabase: Awaited<ReturnType<typeof getSupabaseClient>>,
+    repositoryId: string,
+    durationMinutes: number,
+  ) => {
+    console.log("[v0] createStory: Creating story record...")
+    const { data: story, error: storyError } = await supabase
+      .from("stories")
+      .insert({
+        repository_id: repositoryId,
+        title: `${repoInfo!.name}: Overview`,
+        narrative_style: style,
+        voice_id: voice,
+        target_duration_minutes: durationMinutes,
+        expertise_level: "intermediate",
+        status: "pending",
+        is_public: true,
+        progress: 0,
+        progress_message: "Queued...",
+        generation_mode: generationMode,
+        model_config: {
+          modelId: generationConfig.modelId,
+          temperature: generationConfig.temperature,
+          priority: generationConfig.priority,
+        },
+        generation_config: {
+          ...modeConfig,
+        },
+      })
+      .select()
+      .single()
+
+    if (storyError) {
+      console.error("[v0] createStory: Story insert error:", storyError)
+      throw new Error(`Failed to create story: ${storyError.message}`)
+    }
+    console.log("[v0] createStory: Story created:", story.id)
+
+    setStoryId(story.id)
+
+    // Start generation in background
+    console.log("[v0] createStory: Calling generate API...")
+    const response = await fetch("/api/stories/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        storyId: story.id,
+        generationMode,
+        modeConfig,
+        modelConfig: {
+          modelId: generationConfig.modelId,
+          temperature: generationConfig.temperature,
+        },
+      }),
+    })
+
+    console.log("[v0] createStory: Generate API response status:", response.status)
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+      console.error("[v0] createStory: Generate API error:", errorData)
+      // Update story with error but don't throw - poll will catch it
+      await supabase
+        .from("stories")
+        .update({
+          status: "failed",
+          error_message: errorData.error || `API error: ${response.status}`,
+        })
+        .eq("id", story.id)
+    }
+
+    console.log("[v0] createStory: Generation initiated successfully")
   }
 
   // Poll for status updates
