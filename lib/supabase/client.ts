@@ -1,7 +1,8 @@
 "use client"
 
 let browserClient: ReturnType<typeof import("@supabase/supabase-js").createClient> | null = null
-let clientPromise: Promise<ReturnType<typeof import("@supabase/supabase-js").createClient>> | null = null
+let isCreating = false
+let createQueue: Array<(client: ReturnType<typeof import("@supabase/supabase-js").createClient>) => void> = []
 
 // Memory storage - never touches localStorage
 const memoryStorage: Record<string, string> = {}
@@ -53,11 +54,24 @@ function createMockClient() {
         error: null,
       }),
       update: () => ({ eq: () => ({ data: null, error: null }), data: null, error: null }),
+      upsert: () => ({
+        select: () => ({ single: async () => ({ data: null, error: null }) }),
+        data: null,
+        error: null,
+      }),
       delete: () => ({ eq: () => ({ data: null, error: null }), data: null, error: null }),
     }),
     rpc: async () => ({ data: null, error: null }),
+    storage: {
+      from: () => ({
+        upload: async () => ({ data: null, error: null }),
+        getPublicUrl: () => ({ data: { publicUrl: "" } }),
+      }),
+    },
   } as unknown as ReturnType<typeof import("@supabase/supabase-js").createClient>
 }
+
+const STORAGE_KEY = "codetales-auth-token"
 
 export async function getSupabaseClient(): Promise<ReturnType<typeof import("@supabase/supabase-js").createClient>> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -67,7 +81,7 @@ export async function getSupabaseClient(): Promise<ReturnType<typeof import("@su
     return createMockClient()
   }
 
-  // Server-side: always create new client without persistence
+  // Server-side: always create fresh client without persistence
   if (typeof window === "undefined") {
     const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
     return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
@@ -83,52 +97,56 @@ export async function getSupabaseClient(): Promise<ReturnType<typeof import("@su
     return browserClient
   }
 
-  // If already creating, wait for it
-  if (clientPromise) {
-    return clientPromise
+  if (isCreating) {
+    return new Promise((resolve) => {
+      createQueue.push(resolve)
+    })
   }
 
-  // Create the client lazily with memory-only storage
-  clientPromise = (async () => {
-    try {
-      const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
+  isCreating = true
 
-      browserClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-          storage: safeStorage,
-          flowType: "pkce",
-          storageKey: "sb-auth-token",
-        },
-      })
+  try {
+    const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
 
-      return browserClient
-    } catch (err) {
-      console.error("[CodeTales] Error creating auth client:", err)
-      return createMockClient()
-    }
-  })()
+    browserClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: safeStorage,
+        flowType: "pkce",
+        storageKey: STORAGE_KEY,
+      },
+    })
 
-  return clientPromise
+    // Resolve all queued requests with the same client
+    createQueue.forEach((resolve) => resolve(browserClient!))
+    createQueue = []
+
+    return browserClient
+  } catch (err) {
+    console.error("[CodeTales] Error creating auth client:", err)
+    const mockClient = createMockClient()
+    createQueue.forEach((resolve) => resolve(mockClient))
+    createQueue = []
+    return mockClient
+  } finally {
+    isCreating = false
+  }
 }
 
 export function createClient(): ReturnType<typeof import("@supabase/supabase-js").createClient> {
-  // Trigger async creation but don't wait
-  if (typeof window !== "undefined" && !browserClient && !clientPromise) {
+  if (typeof window !== "undefined" && !browserClient && !isCreating) {
+    // Trigger async creation but don't wait
     getSupabaseClient()
   }
 
   // Return cached client or mock
-  if (browserClient) {
-    return browserClient
-  }
-
-  return createMockClient()
+  return browserClient || createMockClient()
 }
 
 export function clearClient() {
   browserClient = null
-  clientPromise = null
+  isCreating = false
+  createQueue = []
 }
