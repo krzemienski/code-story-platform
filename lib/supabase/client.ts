@@ -2,6 +2,7 @@
 
 let browserClient: ReturnType<typeof import("@supabase/supabase-js").createClient> | null = null
 let clientCreationPromise: Promise<ReturnType<typeof import("@supabase/supabase-js").createClient>> | null = null
+let storageAccessRequested = false
 
 // Memory storage - never touches localStorage
 const memoryStorage: Record<string, string> = {}
@@ -16,6 +17,62 @@ const safeStorage = {
   removeItem: (key: string): void => {
     delete memoryStorage[key]
   },
+}
+
+async function requestStorageAccess(): Promise<boolean> {
+  if (storageAccessRequested) return true
+  storageAccessRequested = true
+
+  if (typeof window === "undefined") return false
+
+  try {
+    // Check if we're in an iframe
+    if (window.self !== window.top) {
+      // Check if Storage Access API is available
+      if (document.requestStorageAccess) {
+        const hasAccess = (await document.hasStorageAccess?.()) ?? false
+        if (!hasAccess) {
+          // Note: This will only work after user interaction
+          // We try anyway in case it was previously granted
+          try {
+            await document.requestStorageAccess()
+            return true
+          } catch {
+            // Expected to fail without user gesture - that's OK
+            return false
+          }
+        }
+        return hasAccess
+      }
+    }
+    return true // Not in iframe, storage should work
+  } catch {
+    return false
+  }
+}
+
+if (typeof window !== "undefined") {
+  const originalConsoleError = console.error
+  console.error = (...args) => {
+    const message = args[0]?.toString?.() || ""
+    // Suppress storage access errors - we handle this gracefully with memory storage
+    if (
+      message.includes("Access to storage is not allowed") ||
+      message.includes("localStorage") ||
+      message.includes("storage is not allowed")
+    ) {
+      return
+    }
+    originalConsoleError.apply(console, args)
+  }
+
+  // Also suppress unhandled promise rejections for storage errors
+  window.addEventListener("unhandledrejection", (event) => {
+    const message = event.reason?.message || event.reason?.toString?.() || ""
+    if (message.includes("Access to storage is not allowed") || message.includes("storage is not allowed")) {
+      event.preventDefault()
+    }
+  })
 }
 
 function createMockClient() {
@@ -79,6 +136,8 @@ async function createBrowserClient(): Promise<ReturnType<typeof import("@supabas
   if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === "placeholder") {
     return createMockClient()
   }
+
+  await requestStorageAccess()
 
   try {
     const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")

@@ -4,6 +4,20 @@ import { useEffect, type ReactNode } from "react"
 
 export function StorageErrorBoundary({ children }: { children: ReactNode }) {
   useEffect(() => {
+    const requestStorageAccess = async () => {
+      try {
+        if (window.self !== window.top && document.requestStorageAccess) {
+          const hasAccess = (await document.hasStorageAccess?.()) ?? false
+          if (!hasAccess) {
+            await document.requestStorageAccess()
+          }
+        }
+      } catch {
+        // Expected to fail without user gesture - that's OK
+      }
+    }
+    requestStorageAccess()
+
     // Global handler for storage access errors from browser extensions
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       const message = event.reason?.message || String(event.reason)
