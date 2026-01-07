@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   GitBranch,
   FileCode,
@@ -23,15 +24,19 @@ import {
   Loader2,
   AlertCircle,
   ChevronRight,
+  ChevronDown,
   Settings,
   Eye,
+  EyeOff,
   Terminal,
   Sparkles,
   Clock,
   Zap,
+  Code,
+  FileText,
+  MessageSquare,
 } from "lucide-react"
 
-// AI Models available for script generation
 const AI_MODELS = [
   { id: "anthropic/claude-sonnet-4-20250514", name: "Claude Sonnet 4", provider: "Anthropic", tier: "recommended" },
   { id: "anthropic/claude-opus-4-20250514", name: "Claude Opus 4", provider: "Anthropic", tier: "premium" },
@@ -103,6 +108,17 @@ interface GenerationConfig {
   includeSfx: boolean
 }
 
+interface AIContextPreview {
+  repositoryData: {
+    name: string
+    description: string
+    language: string
+    topics: string[]
+  }
+  promptTemplate: string
+  estimatedTokens: number
+}
+
 export function GenerationPipeline() {
   // URL and repo state
   const [repoUrl, setRepoUrl] = useState("")
@@ -129,9 +145,8 @@ export function GenerationPipeline() {
   const [logs, setLogs] = useState<PipelineLog[]>([])
   const [showLogs, setShowLogs] = useState(true)
 
-  // Context preview
-  const [contextPreview, setContextPreview] = useState<string | null>(null)
-  const [showContext, setShowContext] = useState(false)
+  const [contextPreview, setContextPreview] = useState<AIContextPreview | null>(null)
+  const [showContextPreview, setShowContextPreview] = useState(false)
 
   // Add log entry
   const addLog = useCallback(
@@ -149,6 +164,42 @@ export function GenerationPipeline() {
     },
     [],
   )
+
+  const generateContextPreview = useCallback((repo: RepoInfo, cfg: GenerationConfig): AIContextPreview => {
+    const promptTemplate = `You are an expert technical writer creating a ${cfg.narrativeStyle} audio script about the ${repo.name} repository.
+
+## Repository Context
+- **Name**: ${repo.fullName}
+- **Description**: ${repo.description}
+- **Primary Language**: ${repo.language}
+- **Topics**: ${repo.topics.join(", ") || "None specified"}
+- **Stars**: ${repo.stars.toLocaleString()}
+- **Default Branch**: ${repo.defaultBranch}
+
+## Task
+Create an engaging ${cfg.duration}-minute audio script in ${cfg.narrativeStyle} style that:
+1. Introduces the repository and its purpose
+2. Explains the architecture and key components
+3. Highlights interesting implementation details
+4. Concludes with the project's impact and future direction
+
+## Output Format
+Generate a natural-sounding script suitable for text-to-speech synthesis.
+Target word count: ~${cfg.duration * 150} words (150 words/minute speaking rate)`
+
+    const estimatedTokens = Math.ceil(promptTemplate.length / 4) + 500 // Rough estimate
+
+    return {
+      repositoryData: {
+        name: repo.fullName,
+        description: repo.description,
+        language: repo.language,
+        topics: repo.topics,
+      },
+      promptTemplate,
+      estimatedTokens,
+    }
+  }, [])
 
   // Validate GitHub URL
   const validateRepo = async () => {
@@ -205,6 +256,10 @@ export function GenerationPipeline() {
         stars: info.stars,
       })
 
+      const preview = generateContextPreview(info, config)
+      setContextPreview(preview)
+      addLog("System", "AI context preview generated", "info", { estimatedTokens: preview.estimatedTokens })
+
       setStage("configuring")
     } catch (err) {
       const message = err instanceof Error ? err.message : "Validation failed"
@@ -235,15 +290,14 @@ export function GenerationPipeline() {
       } = await supabase.auth.getUser()
       addLog("System", user ? `Authenticated as ${user.email}` : "Anonymous generation", "info")
 
-      // Create or get repository record
       addLog("Analyzer", "Creating repository record...")
       const { data: repoRecord, error: repoError } = await supabase
         .from("code_repositories")
         .upsert(
           {
-            github_url: repoUrl,
-            name: repoInfo.name,
-            full_name: repoInfo.fullName,
+            repo_url: repoUrl,
+            repo_name: repoInfo.name,
+            repo_owner: repoInfo.fullName.split("/")[0],
             description: repoInfo.description,
             primary_language: repoInfo.language,
             default_branch: repoInfo.defaultBranch,
@@ -252,89 +306,112 @@ export function GenerationPipeline() {
             topics: repoInfo.topics,
             last_analyzed_at: new Date().toISOString(),
           },
-          { onConflict: "github_url" },
+          { onConflict: "repo_url" },
         )
         .select()
         .single()
 
       if (repoError) {
-        throw new Error(`Failed to create repository: ${repoError.message}`)
+        // Try to fetch existing repo
+        addLog("Analyzer", "Upsert failed, trying to find existing repository...", "warning")
+        const { data: existingRepo, error: fetchError } = await supabase
+          .from("code_repositories")
+          .select()
+          .eq("repo_url", repoUrl)
+          .single()
+
+        if (fetchError || !existingRepo) {
+          throw new Error(`Failed to create/find repository: ${repoError.message}`)
+        }
+
+        addLog("Analyzer", "Using existing repository record", "success", { id: existingRepo.id })
+        await createStoryAndGenerate(supabase, existingRepo.id, user?.id)
+        return
       }
+
       addLog("Analyzer", "Repository record created", "success", { id: repoRecord.id })
-
-      // Create story record
-      addLog("System", "Creating tale record...")
-      const { data: story, error: storyError } = await supabase
-        .from("stories")
-        .insert({
-          user_id: user?.id || null,
-          repository_id: repoRecord.id,
-          title: `${repoInfo.name}: Overview`,
-          status: "pending",
-          narrative_style: config.narrativeStyle,
-          target_duration_minutes: config.duration,
-          is_public: true,
-          progress: 0,
-          progress_message: "Initializing generation...",
-          generation_mode: config.generationMode,
-          model_config: {
-            model: config.model,
-            voice: config.voice,
-          },
-          generation_config: {
-            includeMusic: config.includeMusic,
-            includeSfx: config.includeSfx,
-          },
-        })
-        .select()
-        .single()
-
-      if (storyError) {
-        throw new Error(`Failed to create story: ${storyError.message}`)
-      }
-
-      setStoryId(story.id)
-      addLog("System", "Tale record created", "success", { id: story.id })
-
-      // Call generate API
-      setStage("generating")
-      addLog("Narrator", "Starting AI script generation...")
-
-      const generateResponse = await fetch("/api/stories/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storyId: story.id,
-          repositoryId: repoRecord.id,
-          narrativeStyle: config.narrativeStyle,
-          targetDuration: config.duration,
-          generationMode: config.generationMode,
-          modelConfig: {
-            model: config.model,
-            voice: config.voice,
-          },
-          modeConfig: {
-            includeMusic: config.includeMusic,
-            includeSfx: config.includeSfx,
-          },
-        }),
-      })
-
-      if (!generateResponse.ok) {
-        const errorData = await generateResponse.json().catch(() => ({}))
-        throw new Error(errorData.error || `Generation failed: ${generateResponse.status}`)
-      }
-
-      addLog("System", "Generation started - polling for updates...", "success")
-
-      // Start polling for progress
-      pollProgress(story.id, supabase)
+      await createStoryAndGenerate(supabase, repoRecord.id, user?.id)
     } catch (err) {
       const message = err instanceof Error ? err.message : "Generation failed"
       setError(message)
       addLog("System", message, "error")
       setStage("error")
     }
+  }
+
+  const createStoryAndGenerate = async (
+    supabase: Awaited<ReturnType<typeof import("@/lib/supabase/client").getSupabaseClient>>,
+    repositoryId: string,
+    userId: string | undefined,
+  ) => {
+    // Create story record
+    addLog("System", "Creating tale record...")
+    const { data: story, error: storyError } = await supabase
+      .from("stories")
+      .insert({
+        user_id: userId || null,
+        repository_id: repositoryId,
+        title: `${repoInfo!.name}: Overview`,
+        status: "pending",
+        narrative_style: config.narrativeStyle,
+        target_duration_minutes: config.duration,
+        is_public: true,
+        progress: 0,
+        progress_message: "Initializing generation...",
+        generation_mode: config.generationMode,
+        model_config: {
+          model: config.model,
+          voice: config.voice,
+        },
+        generation_config: {
+          includeMusic: config.includeMusic,
+          includeSfx: config.includeSfx,
+        },
+      })
+      .select()
+      .single()
+
+    if (storyError) {
+      throw new Error(`Failed to create story: ${storyError.message}`)
+    }
+
+    setStoryId(story.id)
+    addLog("System", "Tale record created", "success", { id: story.id })
+
+    // Call generate API
+    setStage("generating")
+    addLog("Narrator", "Starting AI script generation...")
+    addLog("Narrator", `Using model: ${config.model}`, "info")
+
+    const generateResponse = await fetch("/api/stories/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        storyId: story.id,
+        repositoryId: repositoryId,
+        narrativeStyle: config.narrativeStyle,
+        targetDuration: config.duration,
+        generationMode: config.generationMode,
+        modelConfig: {
+          model: config.model,
+          voice: config.voice,
+        },
+        modeConfig: {
+          includeMusic: config.includeMusic,
+          includeSfx: config.includeSfx,
+        },
+      }),
+    })
+
+    if (!generateResponse.ok) {
+      const errorData = await generateResponse.json().catch(() => ({}))
+      throw new Error(errorData.error || `Generation failed: ${generateResponse.status}`)
+    }
+
+    addLog("System", "Generation started - polling for updates...", "success")
+
+    // Start polling for progress
+    pollProgress(story.id, supabase)
   }
 
   // Poll for progress updates
@@ -401,6 +478,16 @@ export function GenerationPipeline() {
       error: { icon: AlertCircle, color: "text-red-500", label: "Error" },
     }
     return stages[s]
+  }
+
+  const handleConfigChange = <K extends keyof GenerationConfig>(key: K, value: GenerationConfig[K]) => {
+    setConfig((c) => {
+      const newConfig = { ...c, [key]: value }
+      if (repoInfo) {
+        setContextPreview(generateContextPreview(repoInfo, newConfig))
+      }
+      return newConfig
+    })
   }
 
   const currentStageInfo = getStageInfo(stage)
@@ -507,9 +594,18 @@ export function GenerationPipeline() {
                   </div>
                   <p className="text-sm text-muted-foreground">{repoInfo.description}</p>
                   <div className="flex gap-4 text-sm text-muted-foreground">
-                    <span>⭐ {repoInfo.stars.toLocaleString()}</span>
-                    <span>🍴 {repoInfo.forks.toLocaleString()}</span>
+                    <span>&#9733; {repoInfo.stars.toLocaleString()}</span>
+                    <span>Forks: {repoInfo.forks.toLocaleString()}</span>
                   </div>
+                  {repoInfo.topics.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {repoInfo.topics.slice(0, 5).map((topic) => (
+                        <Badge key={topic} variant="outline" className="text-xs">
+                          {topic}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -536,7 +632,7 @@ export function GenerationPipeline() {
                   <TabsContent value="ai" className="space-y-4 pt-4">
                     <div className="space-y-2">
                       <Label>Script Generation Model</Label>
-                      <Select value={config.model} onValueChange={(v) => setConfig((c) => ({ ...c, model: v }))}>
+                      <Select value={config.model} onValueChange={(v) => handleConfigChange("model", v)}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -549,6 +645,8 @@ export function GenerationPipeline() {
                                   {m.provider}
                                 </Badge>
                                 {m.tier === "recommended" && <Sparkles className="h-3 w-3 text-yellow-500" />}
+                                {m.tier === "latest" && <Zap className="h-3 w-3 text-blue-500" />}
+                                {m.tier === "premium" && <span className="text-xs text-purple-500">Premium</span>}
                               </div>
                             </SelectItem>
                           ))}
@@ -560,9 +658,7 @@ export function GenerationPipeline() {
                       <Label>Generation Mode</Label>
                       <Select
                         value={config.generationMode}
-                        onValueChange={(v: "hybrid" | "elevenlabs_studio") =>
-                          setConfig((c) => ({ ...c, generationMode: v }))
-                        }
+                        onValueChange={(v: "hybrid" | "elevenlabs_studio") => handleConfigChange("generationMode", v)}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -588,7 +684,7 @@ export function GenerationPipeline() {
                   <TabsContent value="voice" className="space-y-4 pt-4">
                     <div className="space-y-2">
                       <Label>Narrator Voice</Label>
-                      <Select value={config.voice} onValueChange={(v) => setConfig((c) => ({ ...c, voice: v }))}>
+                      <Select value={config.voice} onValueChange={(v) => handleConfigChange("voice", v)}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -611,14 +707,14 @@ export function GenerationPipeline() {
                           <Label>Background Music</Label>
                           <Switch
                             checked={config.includeMusic}
-                            onCheckedChange={(v) => setConfig((c) => ({ ...c, includeMusic: v }))}
+                            onCheckedChange={(v) => handleConfigChange("includeMusic", v)}
                           />
                         </div>
                         <div className="flex items-center justify-between">
                           <Label>Sound Effects</Label>
                           <Switch
                             checked={config.includeSfx}
-                            onCheckedChange={(v) => setConfig((c) => ({ ...c, includeSfx: v }))}
+                            onCheckedChange={(v) => handleConfigChange("includeSfx", v)}
                           />
                         </div>
                       </>
@@ -630,7 +726,7 @@ export function GenerationPipeline() {
                       <Label>Narrative Style</Label>
                       <Select
                         value={config.narrativeStyle}
-                        onValueChange={(v) => setConfig((c) => ({ ...c, narrativeStyle: v }))}
+                        onValueChange={(v) => handleConfigChange("narrativeStyle", v)}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -655,7 +751,7 @@ export function GenerationPipeline() {
                       </div>
                       <Slider
                         value={[config.duration]}
-                        onValueChange={([v]) => setConfig((c) => ({ ...c, duration: v }))}
+                        onValueChange={([v]) => handleConfigChange("duration", v)}
                         min={5}
                         max={60}
                         step={5}
@@ -688,6 +784,77 @@ export function GenerationPipeline() {
             </Card>
           )}
 
+          {contextPreview && stage === "configuring" && (
+            <Card>
+              <CardHeader className="pb-2">
+                <Collapsible open={showContextPreview} onOpenChange={setShowContextPreview}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-between p-0 h-auto hover:bg-transparent">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <MessageSquare className="h-5 w-5" />
+                        AI Context Preview
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          ~{contextPreview.estimatedTokens} tokens
+                        </Badge>
+                        {showContextPreview ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </div>
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardDescription className="mt-2">
+                      Preview what data will be sent to the AI for script generation
+                    </CardDescription>
+                  </CollapsibleContent>
+                </Collapsible>
+              </CardHeader>
+              <Collapsible open={showContextPreview} onOpenChange={setShowContextPreview}>
+                <CollapsibleContent>
+                  <CardContent className="space-y-4">
+                    {/* Repository Data Section */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <Code className="h-4 w-4" />
+                        Repository Data
+                      </div>
+                      <div className="p-3 bg-muted/50 rounded-lg text-xs font-mono space-y-1">
+                        <div>
+                          <span className="text-muted-foreground">name:</span> {contextPreview.repositoryData.name}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">language:</span>{" "}
+                          {contextPreview.repositoryData.language}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">topics:</span>{" "}
+                          {contextPreview.repositoryData.topics.join(", ") || "none"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Prompt Template Section */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <FileText className="h-4 w-4" />
+                        Prompt Template
+                      </div>
+                      <ScrollArea className="h-48">
+                        <pre className="p-3 bg-muted/50 rounded-lg text-xs font-mono whitespace-pre-wrap">
+                          {contextPreview.promptTemplate}
+                        </pre>
+                      </ScrollArea>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+          )}
+
           {/* Complete State */}
           {stage === "complete" && storyId && (
             <Card className="border-green-500/50 bg-green-500/5">
@@ -709,6 +876,7 @@ export function GenerationPipeline() {
                         setRepoUrl("")
                         setStoryId(null)
                         setLogs([])
+                        setContextPreview(null)
                       }}
                     >
                       Generate Another
@@ -729,7 +897,7 @@ export function GenerationPipeline() {
                 Pipeline Logs
               </CardTitle>
               <Button variant="ghost" size="sm" onClick={() => setShowLogs(!showLogs)}>
-                <Eye className="h-4 w-4" />
+                {showLogs ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </CardHeader>
             <CardContent className="flex-1 overflow-hidden p-0">

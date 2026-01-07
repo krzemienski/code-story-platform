@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { getSupabaseClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import {
   Bot,
@@ -209,42 +209,50 @@ export function ProcessingLogs({ storyId, isDemo }: ProcessingLogsProps) {
     }
 
     // Real mode: subscribe to processing logs
-    const supabase = createClient()
+    let mounted = true
+    let channel: ReturnType<Awaited<ReturnType<typeof getSupabaseClient>>["channel"]> | null = null
 
-    // Fetch existing logs
-    const fetchLogs = async () => {
+    const initSubscription = async () => {
+      const supabase = await getSupabaseClient()
+
+      // Fetch existing logs
       const { data } = await supabase
         .from("processing_logs")
         .select("*")
         .eq("story_id", storyId)
         .order("timestamp", { ascending: true })
 
-      if (data) {
+      if (data && mounted) {
         setLogs(data as ProcessingLog[])
       }
+
+      // Subscribe to new logs
+      channel = supabase
+        .channel(`logs-${storyId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "processing_logs",
+            filter: `story_id=eq.${storyId}`,
+          },
+          (payload) => {
+            if (mounted) {
+              setLogs((prev) => [...prev, payload.new as ProcessingLog])
+            }
+          },
+        )
+        .subscribe()
     }
 
-    fetchLogs()
-
-    // Subscribe to new logs
-    const channel = supabase
-      .channel(`logs-${storyId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "processing_logs",
-          filter: `story_id=eq.${storyId}`,
-        },
-        (payload) => {
-          setLogs((prev) => [...prev, payload.new as ProcessingLog])
-        },
-      )
-      .subscribe()
+    initSubscription()
 
     return () => {
-      supabase.removeChannel(channel)
+      mounted = false
+      if (channel) {
+        getSupabaseClient().then((supabase) => supabase.removeChannel(channel!))
+      }
     }
   }, [storyId, isDemo])
 
