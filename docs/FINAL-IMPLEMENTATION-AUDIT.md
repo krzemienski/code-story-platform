@@ -79,9 +79,9 @@ The Code Tales application is a fully functional audio narrative generation plat
 | BMAD-METHOD: Overview | 12 min | 12,277 chars | hybrid |
 
 ### 3.2 Audio URL Format
-```
+\`\`\`
 https://ffydbczyafseklsthhdo.supabase.co/storage/v1/object/public/story-audio/{story_id}_chunk_{n}.mp3
-```
+\`\`\`
 
 All audio URLs are publicly accessible via Supabase storage.
 

@@ -12,14 +12,14 @@ This document defines the systematic procedure for analyzing code repositories t
 
 Identify the main entry points of the repository:
 
-```
+\`\`\`
 Priority Order:
 1. package.json / pyproject.toml / Cargo.toml (dependency manifests)
 2. main.* / index.* / app.* / server.* (application entry)
 3. src/ / lib/ / app/ directories (source code roots)
 4. README.md / docs/ (documentation)
 5. Configuration files (.env.example, config.*, settings.*)
-```
+\`\`\`
 
 ### 1.2 Technology Stack Identification
 
@@ -50,7 +50,7 @@ Collect baseline metrics:
 
 Common patterns to identify:
 
-```
+\`\`\`
 Feature-based:
 ├── features/
 │   ├── auth/
@@ -68,7 +68,7 @@ Domain-driven:
 ├── application/
 ├── infrastructure/
 └── presentation/
-```
+\`\`\`
 
 ### 2.2 Component Relationship Mapping
 
@@ -106,14 +106,14 @@ Extract meaning from:
 
 Parse and categorize:
 
-```typescript
+\`\`\`typescript
 // Types of valuable comments:
 // - TODO/FIXME (technical debt indicators)
 // - @param/@returns (API contracts)
 // - Design decision explanations
 // - Warning/caution notices
 // - Reference links
-```
+\`\`\`
 
 ### 3.3 Pattern Recognition
 
@@ -167,7 +167,7 @@ Map analysis to user goals:
 
 ### 5.1 Analysis Document Structure
 
-```json
+\`\`\`json
 {
   "repository": {
     "name": "string",
@@ -206,7 +206,7 @@ Map analysis to user goals:
     "themes": ["string"]
   }
 }
-```
+\`\`\`
 
 ### 5.2 Narrative Element Extraction
 
@@ -293,39 +293,39 @@ Before generating tales, validate:
 ## Appendix B: Common Repository Archetypes
 
 ### Web Application (Next.js/React)
-```
+\`\`\`
 Focus: Pages, components, API routes, state management
 Key files: app/, pages/, components/, lib/, api/
 Narrative: User journey through the interface
-```
+\`\`\`
 
 ### API Service (FastAPI/Express)
-```
+\`\`\`
 Focus: Endpoints, middleware, database, auth
 Key files: routes/, controllers/, models/, middleware/
 Narrative: Request lifecycle journey
-```
+\`\`\`
 
 ### CLI Tool (Commander/Click)
-```
+\`\`\`
 Focus: Commands, arguments, execution flow
 Key files: commands/, cli.*, main.*
 Narrative: User command execution story
-```
+\`\`\`
 
 ### Library/SDK
-```
+\`\`\`
 Focus: Public API, internal implementation, examples
 Key files: src/, lib/, index.*, examples/
 Narrative: How consumers use the library
-```
+\`\`\`
 
 ### Microservice
-```
+\`\`\`
 Focus: Communication, events, data contracts
 Key files: events/, handlers/, schemas/, clients/
 Narrative: Service interactions and data flow
-```
+\`\`\`
 
 ---
 

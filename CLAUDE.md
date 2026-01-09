@@ -23,7 +23,7 @@ This file provides comprehensive guidance for AI assistants (Claude, Cursor, Git
 
 ## Architecture Overview
 
-```
+\`\`\`
 ┌─────────────────────────────────────────────────────────────────┐
 │                     CODE TALES ARCHITECTURE                      │
 ├─────────────────────────────────────────────────────────────────┤
@@ -54,11 +54,11 @@ This file provides comprehensive guidance for AI assistants (Claude, Cursor, Git
 │  └── processing_logs           → Real-time progress              │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
-```
+\`\`\`
 
 ## Project Structure
 
-```
+\`\`\`
 code-story-platform/
 ├── app/                      # Next.js App Router
 │   ├── api/                  # API routes
@@ -95,11 +95,11 @@ code-story-platform/
 ├── scripts/                  # SQL migrations (001-007)
 ├── docs/                     # Additional documentation
 └── Makefile                  # Build commands
-```
+\`\`\`
 
 ## Quick Commands
 
-```bash
+\`\`\`bash
 # Development
 make dev              # Start dev server (localhost:3000)
 make install          # Install dependencies
@@ -117,13 +117,13 @@ make docker-logs      # View logs
 
 # Database
 make db-types         # Generate TypeScript types from Supabase
-```
+\`\`\`
 
 ## Generation Pipeline
 
 The main generation flow in `app/api/stories/generate/route.ts`:
 
-```
+\`\`\`
 1. ANALYZER AGENT
    └── Fetch repo tree, README, languages, package.json
    └── Identify key directories and patterns
@@ -143,13 +143,13 @@ The main generation flow in `app/api/stories/generate/route.ts`:
    └── Update story status to 'completed'
    └── Set audio_url and audio_chunks array
    └── Make public for virality (is_public = true)
-```
+\`\`\`
 
 ## Database Schema
 
 Core tables (see `scripts/001_create_codestory_tables.sql`):
 
-```sql
+\`\`\`sql
 -- User profiles (extends auth.users)
 profiles (id, email, name, subscription_tier, usage_quota)
 
@@ -165,7 +165,7 @@ stories (id, user_id, repository_id, title, narrative_style,
 
 -- Processing logs for real-time UI
 processing_logs (id, story_id, agent_type, message, details, level)
-```
+\`\`\`
 
 **Important**: All tables have Row Level Security (RLS) enabled. Use `lib/supabase/service.ts` for admin operations that bypass RLS.
 
@@ -192,7 +192,7 @@ Defined in `lib/generation/modes.ts`:
 
 ## Environment Variables
 
-```env
+\`\`\`env
 # Required
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
@@ -203,13 +203,13 @@ ANTHROPIC_API_KEY=sk-ant-...
 # Optional
 GITHUB_TOKEN=ghp_...              # For private repos
 NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=http://localhost:3000/auth/callback
-```
+\`\`\`
 
 ## Code Patterns
 
 ### Supabase Client Selection
 
-```typescript
+\`\`\`typescript
 // Browser components - uses cookies for auth
 import { createClient } from "@/lib/supabase/client"
 
@@ -218,17 +218,17 @@ import { createClient } from "@/lib/supabase/server"
 
 // API routes needing RLS bypass - service role
 import { createServiceClient } from "@/lib/supabase/service"
-```
+\`\`\`
 
 ### Audio Chunking
 
 Long scripts are split into ~8000 char chunks for reliable TTS processing:
 
-```typescript
+\`\`\`typescript
 const chunks = splitTextIntoChunks(script, 8000)
 // Chunks stored in story.audio_chunks array
 // Merged on download via /api/stories/[id]/download
-```
+\`\`\`
 
 ### Global Audio Player
 
@@ -241,13 +241,13 @@ const chunks = splitTextIntoChunks(script, 8000)
 
 Real-time progress updates via `lib/agents/log-helper.ts`:
 
-```typescript
+\`\`\`typescript
 await addProcessingLog(supabase, storyId, {
   agent_type: "narrator",
   message: "Generating script...",
   level: "info"
 })
-```
+\`\`\`
 
 ## Common Tasks
 
@@ -319,9 +319,9 @@ The `stories.status` column uses these values:
 - [ElevenLabs Analysis](./docs/ELEVENLABS-CLAUDE-ANALYSIS.md) - Generation mode comparison
 - [Repository Analysis](./docs/REPOSITORY-ANALYSIS-PROCEDURE.md) - Analysis procedure
 - [Supabase Dashboard](https://supabase.com/dashboard)
-```
+\`\`\`
 
-```makefile file="Makefile"
+\`\`\`makefile file="Makefile"
 # Code Tales Platform - Makefile
 # ================================
 # Quick commands for development, building, and deployment

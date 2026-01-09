@@ -39,9 +39,9 @@ The SQL script `scripts/001_create_codestory_tables.sql` is now **fully idempote
 
 ### Current Pipeline (Hybrid Approach)
 
-```
+\`\`\`
 User Input → Claude/GPT (Script via AI Gateway) → ElevenLabs TTS API → Supabase Storage
-```
+\`\`\`
 
 **Components:**
 - **Script Generation**: Claude Sonnet / GPT-4o via Vercel AI Gateway (auto-routed)
@@ -93,9 +93,9 @@ User Input → Claude/GPT (Script via AI Gateway) → ElevenLabs TTS API → Sup
 
 ### Mode 1: Unified ElevenLabs (Full Studio Pipeline)
 
-```
+\`\`\`
 User Input → ElevenLabs GenFM/Studio → Full Audio Production
-```
+\`\`\`
 
 **Best For:**
 - Podcast-style tales (conversational host + guest)
@@ -104,7 +104,7 @@ User Input → ElevenLabs GenFM/Studio → Full Audio Production
 - Multi-character narratives
 
 **Configuration:**
-```typescript
+\`\`\`typescript
 {
   mode: "elevenlabs_studio",
   format: "podcast" | "audiobook" | "documentary",
@@ -114,13 +114,13 @@ User Input → ElevenLabs GenFM/Studio → Full Audio Production
   duration: "short" | "default" | "long",
   focusAreas: string[] // Up to 3
 }
-```
+\`\`\`
 
 ### Mode 2: Hybrid Claude + ElevenLabs
 
-```
+\`\`\`
 User Input → Claude/GPT (Script) → ElevenLabs TTS → Audio
-```
+\`\`\`
 
 **Best For:**
 - Fiction narratives with complex storytelling
@@ -129,7 +129,7 @@ User Input → Claude/GPT (Script) → ElevenLabs TTS → Audio
 - Content requiring custom prompt engineering
 
 **Configuration:**
-```typescript
+\`\`\`typescript
 {
   mode: "claude_hybrid",
   scriptModel: "anthropic/claude-sonnet-4" | "openai/gpt-4o",
@@ -137,14 +137,14 @@ User Input → Claude/GPT (Script) → ElevenLabs TTS → Audio
   narrativeStyle: "fiction" | "documentary" | "tutorial" | "technical",
   voiceSettings: VoiceSettings
 }
-```
+\`\`\`
 
 ---
 
 ## Repository Analysis Procedure
 
 ### Step 1: Initial Context Gathering
-```typescript
+\`\`\`typescript
 // Files to always check first
 const contextFiles = [
   'lib/types.ts',           // Type definitions
@@ -152,10 +152,10 @@ const contextFiles = [
   'lib/generation/modes.ts', // Generation modes
   'app/api/stories/generate/route.ts', // Main pipeline
 ]
-```
+\`\`\`
 
 ### Step 2: Database Schema Validation
-```sql
+\`\`\`sql
 -- Verify all tables exist
 SELECT table_name FROM information_schema.tables 
 WHERE table_schema = 'public';
@@ -167,7 +167,7 @@ WHERE table_name = 'stories' ORDER BY ordinal_position;
 -- Verify RLS policies
 SELECT tablename, policyname FROM pg_policies 
 WHERE tablename IN ('profiles', 'stories', 'story_intents', 'story_chapters');
-```
+\`\`\`
 
 ### Step 3: Code Pattern Analysis
 - Check all status value usage (`'completed'` not `'complete'`)
@@ -254,7 +254,7 @@ WHERE tablename IN ('profiles', 'stories', 'story_intents', 'story_chapters');
 
 ## Database Schema Reference
 
-```sql
+\`\`\`sql
 -- Complete idempotent schema available at:
 -- scripts/001_create_codestory_tables.sql
 
@@ -267,7 +267,7 @@ WHERE tablename IN ('profiles', 'stories', 'story_intents', 'story_chapters');
 --   'code_review_prep', 'learning_patterns', 'api_documentation',
 --   'bug_investigation', 'migration_planning', 'quick_overview'
 -- )
-```
+\`\`\`
 
 ---
 

@@ -51,9 +51,9 @@ This audit documents the verified working state of Code Tales. The application h
 | autonomous-claude (cc6aa86c) | 15 min | N/A | 45 min |
 
 **Example Audio URL (verified working):**
-```
+\`\`\`
 https://ffydbczyafseklsthhdo.supabase.co/storage/v1/object/public/story-audio/72867155-b15b-4d51-917a-379811f81562_chunk_1.mp3
-```
+\`\`\`
 
 ---
 
@@ -214,7 +214,7 @@ https://ffydbczyafseklsthhdo.supabase.co/storage/v1/object/public/story-audio/72
 
 ## 9. Architecture Summary
 
-```
+\`\`\`
 ┌─────────────────────────────────────────────────────────────────┐
 │                        FRONTEND                                  │
 ├─────────────────────────────────────────────────────────────────┤
@@ -242,7 +242,7 @@ https://ffydbczyafseklsthhdo.supabase.co/storage/v1/object/public/story-audio/72
 │  GitHub API → Repository Analysis                                │
 │  Supabase Storage → Audio File Hosting                          │
 └─────────────────────────────────────────────────────────────────┘
-```
+\`\`\`
 
 ---
 

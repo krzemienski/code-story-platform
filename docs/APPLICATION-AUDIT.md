@@ -99,7 +99,7 @@ This audit reviews all core functionalities of the Code Story platform including
 | Background Music | Defined | Not yet integrated |
 
 ### API Configuration
-```javascript
+\`\`\`javascript
 {
   model_id: "eleven_flash_v2_5",
   output_format: "mp3_44100_128",
@@ -110,7 +110,7 @@ This audit reviews all core functionalities of the Code Story platform including
     use_speaker_boost: true
   }
 }
-```
+\`\`\`
 
 ### Full Studio Mode
 - `lib/generation/elevenlabs-studio.ts` - API wrapper ready

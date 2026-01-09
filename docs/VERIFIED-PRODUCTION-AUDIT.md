@@ -83,7 +83,7 @@ All audio files hosted on Supabase Storage are publicly accessible:
 ## 4. DATABASE SCHEMA VERIFICATION
 
 ### Stories Table Columns (Verified)
-```sql
+\`\`\`sql
 -- Core fields
 id, user_id, title, description, status, repository_url
 -- Content
@@ -94,7 +94,7 @@ audio_url, audio_chunks, voice_id, actual_duration_seconds
 generation_mode, model_config, generation_config, elevenlabs_project_id
 -- Metadata
 is_public, play_count, created_at, updated_at
-```
+\`\`\`
 
 ### RPC Functions (Verified)
 - `increment_play_count(story_id)` - ✅ Working
@@ -158,7 +158,7 @@ is_public, play_count, created_at, updated_at
    - Dependencies list
 
 ### Prompt Structure
-```
+\`\`\`
 SYSTEM PROMPT:
 - Role definition (narrator)
 - Output format (script)
@@ -170,7 +170,7 @@ USER PROMPT:
 - Narrative style
 - Duration target
 - Additional focus areas
-```
+\`\`\`
 
 ---
 
@@ -197,14 +197,14 @@ USER PROMPT:
 
 ## 9. PLAYWRIGHT TEST CONFIGURATION
 
-```json
+\`\`\`json
 {
   "baseURL": "https://codetale.ai",
   "timeout": 120000,
   "screenshot": "on",
   "video": "retain-on-failure"
 }
-```
+\`\`\`
 
 ### Test Coverage
 - Home page load

@@ -19,12 +19,12 @@ This document outlines the comprehensive audit plan for the Code Tales audio pla
 
 ### Data Flow
 
-```
+\`\`\`
 User Click → AudioPlayerContext.play(item) → audioRef.current.src = url
                                            → audioRef.current.play()
                                            ↓
                                Queue Management → Update UI State
-```
+\`\`\`
 
 ---
 
@@ -39,7 +39,7 @@ User Click → AudioPlayerContext.play(item) → audioRef.current.src = url
 
 ### Fixes Implemented
 
-```typescript
+\`\`\`typescript
 // Safari autoplay workaround - requires user gesture
 const playSafari = async () => {
   if (audioRef.current) {
@@ -65,7 +65,7 @@ if ("mediaSession" in navigator) {
   navigator.mediaSession.setActionHandler("seekbackward", () => skipBackward(15))
   navigator.mediaSession.setActionHandler("seekforward", () => skipForward(15))
 }
-```
+\`\`\`
 
 ---
 
@@ -81,7 +81,7 @@ The `AudioPlayerContext` uses a single `audioRef` that is shared globally. When 
 2. Source is replaced
 3. New audio plays
 
-```typescript
+\`\`\`typescript
 const playItem = useCallback((item: QueueItem) => {
   // This automatically stops previous audio since we use single audioRef
   if (audioRef.current) {
@@ -90,7 +90,7 @@ const playItem = useCallback((item: QueueItem) => {
     audioRef.current.play()
   }
 }, [])
-```
+\`\`\`
 
 ---
 
@@ -122,7 +122,7 @@ const playItem = useCallback((item: QueueItem) => {
 
 ### Validation Checks
 
-```typescript
+\`\`\`typescript
 // Script quality validation
 function validateScript(script: string, targetMinutes: number) {
   const words = script.split(/\s+/).length
@@ -144,7 +144,7 @@ function validateScript(script: string, targetMinutes: number) {
     estimatedMinutes: Math.round(words / 150)
   }
 }
-```
+\`\`\`
 
 ---
 
@@ -161,14 +161,14 @@ function validateScript(script: string, targetMinutes: number) {
 
 ### Voice Quality Settings
 
-```typescript
+\`\`\`typescript
 const VOICE_SETTINGS = {
   stability: 0.5,
   similarity_boost: 0.75,
   style: 0.5,
   use_speaker_boost: true
 }
-```
+\`\`\`
 
 ---
 
@@ -206,7 +206,7 @@ const VOICE_SETTINGS = {
 - Social media previews render correctly
 
 ### Database Check
-```sql
+\`\`\`sql
 -- Verify is_public defaults to TRUE
 SELECT column_default 
 FROM information_schema.columns 
@@ -216,7 +216,7 @@ WHERE table_name = 'stories' AND column_name = 'is_public';
 SELECT COUNT(*) as public_count 
 FROM stories 
 WHERE is_public = true AND status = 'completed';
-```
+\`\`\`
 
 ---
 

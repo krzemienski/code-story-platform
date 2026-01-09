@@ -11,7 +11,7 @@ This audit documents the complete state of the Code Tales platform, covering all
 ## 1. Repository Structure Analysis
 
 ### Core Architecture
-```
+\`\`\`
 code-story-platform/
 ├── app/                    # Next.js 16 App Router
 │   ├── api/               # API Routes
@@ -29,7 +29,7 @@ code-story-platform/
 │   └── supabase/         # Database clients
 ├── scripts/              # SQL migrations
 └── docs/                 # Documentation
-```
+\`\`\`
 
 ### Technology Stack
 | Layer | Technology | Version |
@@ -140,7 +140,7 @@ code-story-platform/
 ## 5. Database Schema
 
 ### Stories Table (31 columns)
-```sql
+\`\`\`sql
 stories (
   id, user_id, repository_id, title,
   narrative_style, target_duration_minutes,
@@ -153,7 +153,7 @@ stories (
   processing_started_at, processing_completed_at,
   created_at, updated_at
 )
-```
+\`\`\`
 
 ### Verified Functions
 - `increment_play_count(story_uuid)` - ✅ Exists
@@ -254,7 +254,7 @@ stories (
 
 ## 11. Environment Variables Required
 
-```env
+\`\`\`env
 # Required
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
@@ -266,7 +266,7 @@ ANTHROPIC_API_KEY=
 GITHUB_TOKEN=              # For private repos
 OPENAI_API_KEY=            # If using OpenAI models directly
 GOOGLE_API_KEY=            # If using Google models directly
-```
+\`\`\`
 
 ---
 

@@ -13,7 +13,7 @@ Code Tales transforms any public GitHub repository into an audio experience. Whe
 
 ## System Architecture
 
-```
+\`\`\`
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
 │                                  CODE TALES PLATFORM                                 │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
@@ -77,11 +77,11 @@ Code Tales transforms any public GitHub repository into an audio experience. Whe
 │  │  └──────────────────────────────────────────────────────────────────────────┘   ││
 │  └─────────────────────────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────────────────────────┘
-```
+\`\`\`
 
 ## Data Flow Diagram
 
-```
+\`\`\`
 ┌────────────────────────────────────────────────────────────────────────────────────┐
 │                           TALE GENERATION PIPELINE                                  │
 ├────────────────────────────────────────────────────────────────────────────────────┤
@@ -148,7 +148,7 @@ Code Tales transforms any public GitHub repository into an audio experience. Whe
 │  │  │  │  │  └─────────────────────────────────────────────────────────────────────┘│
 │  │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────────┘
-```
+\`\`\`
 
 ## Features
 
@@ -164,7 +164,7 @@ Code Tales transforms any public GitHub repository into an audio experience. Whe
 
 ## Project Structure
 
-```
+\`\`\`
 code-story-platform/
 ├── app/
 │   ├── api/
@@ -224,11 +224,11 @@ code-story-platform/
 ├── CLAUDE.md                        # AI assistant guidance
 ├── Makefile                         # Build and run commands
 └── docker-compose.yml               # Container orchestration
-```
+\`\`\`
 
 ## Quick Start
 
-```bash
+\`\`\`bash
 # Clone and install
 git clone https://github.com/krzemienski/code-story-platform.git
 cd code-story-platform
@@ -240,7 +240,7 @@ cp .env.example .env.local
 
 # Start development
 make dev
-```
+\`\`\`
 
 Visit [http://localhost:3000](http://localhost:3000)
 
@@ -256,7 +256,7 @@ Visit [http://localhost:3000](http://localhost:3000)
 
 ## Environment Variables
 
-```env
+\`\`\`env
 # Required
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
@@ -267,7 +267,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 # Optional
 GITHUB_TOKEN=ghp_...  # For private repos
 NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=http://localhost:3000/auth/callback
-```
+\`\`\`
 
 ## Contributing
 
