@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { getSupabaseClient } from "@/lib/supabase/client"
+import { useState } from "react"
+import { signInWithPassword, signUpWithPassword, getOAuthUrl } from "@/app/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,78 +24,66 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [supabase, setSupabase] = useState<Awaited<ReturnType<typeof getSupabaseClient>> | null>(null)
-
-  useEffect(() => {
-    if (isOpen && !supabase) {
-      getSupabaseClient().then(setSupabase)
-    }
-  }, [isOpen, supabase])
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!supabase) {
-      setError("Authentication is loading. Please try again.")
-      return
-    }
     setIsLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const result = await signInWithPassword(email, password)
 
-    if (error) {
-      setError(error.message)
+      if (result.error) {
+        setError(result.error)
+        setIsLoading(false)
+      } else {
+        onClose()
+        window.location.href = "/dashboard"
+      }
+    } catch (err) {
+      setError("Failed to sign in. Please try again.")
       setIsLoading(false)
-    } else {
-      onClose()
-      window.location.href = "/dashboard"
     }
   }
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!supabase) {
-      setError("Authentication is loading. Please try again.")
-      return
-    }
     setIsLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/dashboard`,
-        data: {
-          name,
-        },
-      },
-    })
+    try {
+      const result = await signUpWithPassword(email, password)
 
-    if (error) {
-      setError(error.message)
-      setIsLoading(false)
-    } else {
-      setSuccess("Check your email to confirm your account!")
+      if (result.error) {
+        setError(result.error)
+        setIsLoading(false)
+      } else {
+        setSuccess("Check your email to confirm your account!")
+        setIsLoading(false)
+      }
+    } catch (err) {
+      setError("Failed to create account. Please try again.")
       setIsLoading(false)
     }
   }
 
   const handleGitHubSignIn = async () => {
-    if (!supabase) {
-      setError("Authentication is loading. Please try again.")
-      return
-    }
     setIsLoading(true)
-    await supabase.auth.signInWithOAuth({
-      provider: "github",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    setError(null)
+
+    try {
+      const result = await getOAuthUrl("github")
+
+      if (result.error) {
+        setError(result.error)
+        setIsLoading(false)
+      } else if (result.url) {
+        window.location.href = result.url
+      }
+    } catch (err) {
+      setError("Failed to initialize GitHub sign in.")
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -127,7 +115,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
               variant="outline"
               className="w-full bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
               onClick={handleGitHubSignIn}
-              disabled={isLoading || !supabase}
+              disabled={isLoading}
             >
               <Github className="w-4 h-4 mr-2" />
               Continue with GitHub
@@ -171,7 +159,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
                   required
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={isLoading || !supabase}>
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Mail className="w-4 h-4 mr-2" />}
                 Sign In with Email
               </Button>
@@ -193,7 +181,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
               variant="outline"
               className="w-full bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
               onClick={handleGitHubSignIn}
-              disabled={isLoading || !supabase}
+              disabled={isLoading}
             >
               <Github className="w-4 h-4 mr-2" />
               Continue with GitHub
@@ -252,7 +240,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
                   required
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={isLoading || !!success || !supabase}>
+              <Button type="submit" className="w-full" disabled={isLoading || !!success}>
                 {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                 Create Account
               </Button>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, ChevronDown, Zap, DollarSign, Brain, Sparkles, Code } from "lucide-react"
+import { Check, ChevronDown, Zap, DollarSign, Brain, Sparkles, Code, Lightbulb } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -30,6 +30,7 @@ const CAPABILITY_ICONS: Record<ModelCapability, typeof Zap> = {
   analytical: Brain,
   "code-understanding": Code,
   "cost-effective": DollarSign,
+  reasoning: Lightbulb,
 }
 
 const PROVIDER_COLORS: Record<string, string> = {
