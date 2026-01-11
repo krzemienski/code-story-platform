@@ -210,7 +210,15 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       audioRef.current.addEventListener("pause", () => setIsPlaying(false))
 
       audioRef.current.addEventListener("error", (e) => {
-        console.error("[v0] Audio error:", e)
+        const audio = e.target as HTMLAudioElement
+        const error = audio?.error
+        console.error("[v0] Audio error:", {
+          code: error?.code,
+          message: error?.message,
+          src: audio?.src,
+          networkState: audio?.networkState,
+          readyState: audio?.readyState,
+        })
         setIsBuffering(false)
         setIsPlaying(false)
       })
@@ -229,6 +237,12 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
   const playItemInternal = useCallback(
     async (item: QueueItem) => {
+      const audioSrc = item.audioChunks?.[0] || item.audioUrl
+      if (!audioSrc) {
+        console.warn("[v0] Cannot play item - no audio URL available:", item.title)
+        return
+      }
+
       setCurrentItem(item)
       setCurrentChunkIndex(0)
       setIsPlayerVisible(true)
@@ -236,20 +250,15 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
       if (audioRef.current) {
         audioRef.current.pause()
+        audioRef.current.src = audioSrc
+        audioRef.current.playbackRate = playbackRate
+        audioRef.current.volume = isMuted ? 0 : volume
 
-        const audioSrc = item.audioChunks?.[0] || item.audioUrl
-        if (audioSrc) {
-          audioRef.current.src = audioSrc
-          audioRef.current.playbackRate = playbackRate
-          audioRef.current.volume = isMuted ? 0 : volume
-
-          try {
-            await audioRef.current.play()
-          } catch (e) {
-            // Autoplay was prevented - user needs to click play
-            console.log("[v0] Autoplay blocked, waiting for user interaction")
-            setIsPlaying(false)
-          }
+        try {
+          await audioRef.current.play()
+        } catch (e) {
+          console.log("[v0] Autoplay blocked, waiting for user interaction")
+          setIsPlaying(false)
         }
       }
     },
@@ -357,6 +366,12 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
   const addToQueue = useCallback(
     (item: QueueItem) => {
+      const audioSrc = item.audioChunks?.[0] || item.audioUrl
+      if (!audioSrc) {
+        console.warn("[v0] Cannot add to queue - no audio URL:", item.title)
+        return
+      }
+
       setQueue((prev) => {
         if (prev.find((q) => q.id === item.id)) return prev
         return [...prev, item]

@@ -165,6 +165,11 @@ export function HeroSection() {
       const supabase = await getSupabaseClient()
       console.log("[v0] startGeneration: Supabase client obtained")
 
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      console.log("[v0] startGeneration: Current user:", user?.id || "anonymous")
+
       const durationMinutes = DURATIONS.find((d) => d.id === duration)?.minutes || 10
 
       console.log("[v0] startGeneration: Upserting repository record...")
@@ -178,6 +183,7 @@ export function HeroSection() {
             primary_language: repoInfo.language,
             stars_count: repoInfo.stars,
             description: repoInfo.description,
+            user_id: user?.id || null,
           },
           { onConflict: "repo_url", ignoreDuplicates: false },
         )
@@ -198,12 +204,12 @@ export function HeroSection() {
         console.log("[v0] startGeneration: Using existing repository:", existingRepo.id)
         // Use existing repo
         const repoId = existingRepo.id
-        await createStory(supabase, repoId, durationMinutes)
+        await createStory(supabase, repoId, durationMinutes, user?.id || null)
         return
       }
 
       console.log("[v0] startGeneration: Repository created/updated:", repo.id)
-      await createStory(supabase, repo.id, durationMinutes)
+      await createStory(supabase, repo.id, durationMinutes, user?.id || null)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to start generation"
       console.error("[v0] startGeneration: Error:", message, err)
@@ -216,12 +222,14 @@ export function HeroSection() {
     supabase: Awaited<ReturnType<typeof getSupabaseClient>>,
     repositoryId: string,
     durationMinutes: number,
+    userId: string | null,
   ) => {
     console.log("[v0] createStory: Creating story record...")
     const { data: story, error: storyError } = await supabase
       .from("stories")
       .insert({
         repository_id: repositoryId,
+        user_id: userId,
         title: `${repoInfo!.name}: Overview`,
         narrative_style: style,
         voice_id: voice,

@@ -1,9 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
-import { signInWithPassword, signUpWithPassword, getOAuthUrl } from "@/app/actions/auth"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,7 +19,6 @@ interface AuthModalProps {
 export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [name, setName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -30,18 +28,27 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
     setIsLoading(true)
     setError(null)
 
-    try {
-      const result = await signInWithPassword(email, password)
+    console.log("[v0] Starting sign in for:", email)
 
-      if (result.error) {
-        setError(result.error)
-        setIsLoading(false)
-      } else {
-        onClose()
-        window.location.href = "/dashboard"
-      }
+    try {
+      const supabase = createClient()
+      console.log("[v0] Supabase client created, calling signInWithPassword")
+
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      console.log("[v0] Sign in response - data:", data, "error:", authError)
+
+      if (authError) throw authError
+
+      console.log("[v0] Sign in successful, redirecting to dashboard")
+      onClose()
+      window.location.href = "/dashboard"
     } catch (err) {
-      setError("Failed to sign in. Please try again.")
+      console.error("[v0] Sign in error:", err)
+      setError(err instanceof Error ? err.message : "Failed to sign in")
       setIsLoading(false)
     }
   }
@@ -51,18 +58,32 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
     setIsLoading(true)
     setError(null)
 
-    try {
-      const result = await signUpWithPassword(email, password)
+    console.log("[v0] Starting sign up for:", email)
 
-      if (result.error) {
-        setError(result.error)
-        setIsLoading(false)
-      } else {
-        setSuccess("Check your email to confirm your account!")
-        setIsLoading(false)
-      }
+    try {
+      const supabase = createClient()
+      console.log("[v0] Supabase client created, calling signUp")
+
+      const redirectUrl = process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback`
+      console.log("[v0] Redirect URL:", redirectUrl)
+
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+        },
+      })
+
+      console.log("[v0] Sign up response - data:", data, "error:", authError)
+
+      if (authError) throw authError
+
+      setSuccess("Check your email to confirm your account!")
+      setIsLoading(false)
     } catch (err) {
-      setError("Failed to create account. Please try again.")
+      console.error("[v0] Sign up error:", err)
+      setError(err instanceof Error ? err.message : "Failed to create account")
       setIsLoading(false)
     }
   }
@@ -71,17 +92,26 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
     setIsLoading(true)
     setError(null)
 
-    try {
-      const result = await getOAuthUrl("github")
+    console.log("[v0] Starting GitHub OAuth")
 
-      if (result.error) {
-        setError(result.error)
-        setIsLoading(false)
-      } else if (result.url) {
-        window.location.href = result.url
-      }
+    try {
+      const supabase = createClient()
+      const redirectUrl = process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback`
+      console.log("[v0] OAuth redirect URL:", redirectUrl)
+
+      const { data, error: authError } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: {
+          redirectTo: redirectUrl,
+        },
+      })
+
+      console.log("[v0] OAuth response - data:", data, "error:", authError)
+
+      if (authError) throw authError
     } catch (err) {
-      setError("Failed to initialize GitHub sign in.")
+      console.error("[v0] OAuth error:", err)
+      setError(err instanceof Error ? err.message : "Failed to initialize GitHub sign in")
       setIsLoading(false)
     }
   }
@@ -141,7 +171,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
+                  className="bg-zinc-800 border-zinc-700 text-white"
                   required
                 />
               </div>
@@ -155,7 +185,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
+                  className="bg-zinc-800 border-zinc-700 text-white"
                   required
                 />
               </div>
@@ -198,20 +228,6 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
 
             <form onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-zinc-300">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="signup-email" className="text-zinc-300">
                   Email
                 </Label>
@@ -221,7 +237,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
+                  className="bg-zinc-800 border-zinc-700 text-white"
                   required
                 />
               </div>
@@ -235,7 +251,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalP
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
+                  className="bg-zinc-800 border-zinc-700 text-white"
                   minLength={6}
                   required
                 />
